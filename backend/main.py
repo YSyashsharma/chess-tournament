@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, date
@@ -11,7 +11,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# ✅ FINAL CORS (stable)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,7 +28,13 @@ collection = db.matches
 PASSWORD = os.getenv("TOURNAMENT_PASSWORD")
 
 
-# ---------------- AUTH ----------------
+# ---------------- PASSWORD CHECK ----------------
+async def verify_password(x_password: str = Header(None)):
+    if x_password != PASSWORD:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+# ---------------- AUTH (OPTIONAL KEEP) ----------------
 @app.post("/api/auth/login")
 async def login(data: dict):
     if data.get("password") == PASSWORD:
@@ -46,9 +52,14 @@ def calculate_points(winner):
         return 9, 9
 
 
-# ---------------- CREATE MATCH ----------------
+# ---------------- CREATE MATCH (PROTECTED) ----------------
 @app.post("/api/matches")
-async def create_match(data: dict):
+async def create_match(
+    data: dict,
+    x_password: str = Header(None)
+):
+    await verify_password(x_password)
+
     yash_points, nishant_points = calculate_points(data["winner"])
 
     match = {
@@ -61,22 +72,12 @@ async def create_match(data: dict):
         "created_at": datetime.utcnow().isoformat()
     }
 
-    # Insert into MongoDB
     await collection.insert_one(match)
 
-    # ✅ RETURN CLEAN DATA (NO _id)
-    return {
-        "id": match["id"],
-        "match_date": match["match_date"],
-        "winner": match["winner"],
-        "yash_points": match["yash_points"],
-        "nishant_points": match["nishant_points"],
-        "notes": match["notes"],
-        "created_at": match["created_at"]
-    }
+    return match
 
 
-# ---------------- GET MATCHES ----------------
+# ---------------- GET MATCHES (PUBLIC) ----------------
 @app.get("/api/matches")
 async def get_matches():
     matches = []
@@ -85,9 +86,15 @@ async def get_matches():
     return matches
 
 
-# ---------------- UPDATE MATCH ----------------
+# ---------------- UPDATE MATCH (PROTECTED) ----------------
 @app.put("/api/matches/{match_id}")
-async def update_match(match_id: str, data: dict):
+async def update_match(
+    match_id: str,
+    data: dict,
+    x_password: str = Header(None)
+):
+    await verify_password(x_password)
+
     match = await collection.find_one({"id": match_id})
 
     if not match:
@@ -115,14 +122,19 @@ async def update_match(match_id: str, data: dict):
     return updated
 
 
-# ---------------- DELETE MATCH ----------------
+# ---------------- DELETE MATCH (PROTECTED) ----------------
 @app.delete("/api/matches/{match_id}")
-async def delete_match(match_id: str):
+async def delete_match(
+    match_id: str,
+    x_password: str = Header(None)
+):
+    await verify_password(x_password)
+
     await collection.delete_one({"id": match_id})
     return {"message": "Match deleted successfully"}
 
 
-# ---------------- STATS ----------------
+# ---------------- STATS (PUBLIC) ----------------
 @app.get("/api/stats")
 async def get_stats():
     yash_total = 0
