@@ -11,7 +11,7 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-const API = process.env.REACT_APP_API;
+const API = (process.env.REACT_APP_API || "") + "/api";
 
 export default function App() {
   const [stats, setStats] = useState(null);
@@ -26,8 +26,7 @@ export default function App() {
   });
   const [password, setPassword] = useState("");
 
-  // START DATE
-  const START_DATE = new Date("2026-04-04"); // adjust if needed
+  const START_DATE = new Date("2026-04-04");
   const TOTAL_DAYS = 21;
 
   const getDayText = () => {
@@ -37,7 +36,6 @@ export default function App() {
     return `Day ${day} of ${TOTAL_DAYS}`;
   };
 
-  // LOAD DATA
   const loadData = async () => {
     try {
       const m = await axios.get(`${API}/matches`);
@@ -52,7 +50,7 @@ export default function App() {
       let nishant = 0;
       const g = uniqueMatches
         .slice()
-        .sort((a,b)=> new Date(a.match_date)-new Date(b.match_date))
+        .sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
         .map(match => {
           yash += match.yash_points;
           nishant += match.nishant_points;
@@ -72,7 +70,6 @@ export default function App() {
     loadData();
   }, []);
 
-  // ADD MATCH
   const handleAddMatch = async () => {
     if (!password) {
       alert("Enter password to add match");
@@ -80,7 +77,7 @@ export default function App() {
     }
     try {
       await axios.post(`${API}/matches`, formData, {
-        headers: { "Authorization": `Bearer ${password}` }
+        headers: { "x-password": password }
       });
       setShowForm(false);
       setFormData({
@@ -95,7 +92,6 @@ export default function App() {
     }
   };
 
-  // DELETE MATCH
   const handleDelete = async (id) => {
     if (!password) {
       alert("Enter password to delete match");
@@ -104,7 +100,7 @@ export default function App() {
     if (!window.confirm("Delete this match?")) return;
     try {
       await axios.delete(`${API}/matches/${id}`, {
-        headers: { "Authorization": `Bearer ${password}` }
+        headers: { "x-password": password }
       });
       setPassword("");
       loadData();
@@ -113,25 +109,31 @@ export default function App() {
     }
   };
 
+  const leader = stats
+    ? stats.yash_total_points > stats.nishant_total_points
+      ? "Yash leads 👑"
+      : stats.nishant_total_points > stats.yash_total_points
+      ? "Nishant leads 👑"
+      : "It's a tie! ⚖️"
+    : "";
+
   return (
     <div className="min-h-screen bg-black text-white p-4">
-      {/* HEADER */}
       <div className="flex justify-between mb-6">
         <h1 className="flex items-center gap-2 text-xl">
           <Trophy /> Chess Arena
         </h1>
       </div>
 
-      {/* LEADER / DAY */}
       <motion.div
         animate={{ scale: [0.95, 1] }}
         className="p-6 mb-6 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-black text-center"
       >
         <Crown className="mx-auto mb-2" size={40} />
         <h2 className="text-lg font-bold">{getDayText()}</h2>
+        {leader && <p className="text-sm mt-1 font-semibold">{leader}</p>}
       </motion.div>
 
-      {/* SCORE */}
       {stats && (
         <div className="grid grid-cols-2 gap-4 mb-6">
           <motion.div
@@ -141,6 +143,7 @@ export default function App() {
           >
             <h2 className="text-2xl font-bold">{stats.yash_total_points}</h2>
             <p>Yash</p>
+            <p className="text-xs mt-1 text-green-200">{stats.yash_wins}W · {stats.draws}D</p>
           </motion.div>
 
           <motion.div
@@ -150,82 +153,80 @@ export default function App() {
           >
             <h2 className="text-2xl font-bold">{stats.nishant_total_points}</h2>
             <p>Nishant</p>
+            <p className="text-xs mt-1 text-gray-300">{stats.nishant_wins}W · {stats.draws}D</p>
           </motion.div>
         </div>
       )}
 
-      {/* GRAPH */}
       <div className="bg-white/10 p-4 rounded-xl mb-6">
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={graphData}>
             <XAxis dataKey="date" />
             <YAxis />
             <Tooltip />
-            <Line type="monotone" dataKey="Yash" stroke="#22c55e" />
-            <Line type="monotone" dataKey="Nishant" stroke="#8884d8" />
+            <Line type="monotone" dataKey="Yash" stroke="#22c55e" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="Nishant" stroke="#8884d8" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* PASSWORD INPUT (shown only if adding/deleting) */}
       {showForm && (
         <input
           type="password"
           placeholder="Enter password to save"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-4 p-2 bg-white/20 rounded text-black"
+          className="w-full mb-4 p-2 bg-white/20 rounded text-white placeholder-gray-300"
         />
       )}
 
-      {/* ADD BUTTON */}
       <button
         onClick={() => setShowForm(!showForm)}
-        className="bg-green-600 px-4 py-2 rounded mb-4 flex items-center gap-2"
+        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded mb-4 flex items-center gap-2 transition"
       >
-        <Plus size={16} /> Add Match
+        <Plus size={16} /> {showForm ? "Cancel" : "Add Match"}
       </button>
 
-      {/* FORM */}
       {showForm && (
-        <div className="bg-white/10 p-4 rounded mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/10 p-4 rounded mb-4"
+        >
           <input
             type="date"
             value={formData.match_date}
-            onChange={(e) =>
-              setFormData({ ...formData, match_date: e.target.value })
-            }
-            className="w-full mb-2 p-2 bg-white/20 rounded"
+            onChange={(e) => setFormData({ ...formData, match_date: e.target.value })}
+            className="w-full mb-2 p-2 bg-white/20 rounded text-white"
           />
           <select
             value={formData.winner}
-            onChange={(e) =>
-              setFormData({ ...formData, winner: e.target.value })
-            }
-            className="w-full mb-2 p-2 bg-white/20 rounded"
+            onChange={(e) => setFormData({ ...formData, winner: e.target.value })}
+            className="w-full mb-2 p-2 bg-white/20 rounded text-white"
           >
             <option value="Yash">Yash</option>
             <option value="Nishant">Nishant</option>
             <option value="Draw">Draw</option>
           </select>
           <textarea
-            placeholder="Notes"
+            placeholder="Notes (optional)"
             value={formData.notes}
-            onChange={(e) =>
-              setFormData({ ...formData, notes: e.target.value })
-            }
-            className="w-full mb-2 p-2 bg-white/20 rounded"
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            className="w-full mb-2 p-2 bg-white/20 rounded text-white placeholder-gray-300"
           />
           <button
             onClick={handleAddMatch}
-            className="bg-green-500 px-4 py-2 rounded"
+            className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded transition"
           >
             Save
           </button>
-        </div>
+        </motion.div>
       )}
 
-      {/* MATCH LIST */}
+      {matches.length === 0 && (
+        <p className="text-center text-gray-500 mt-4">No matches yet. Add one!</p>
+      )}
+
       {matches.map((m) => (
         <motion.div
           key={m.id}
@@ -234,32 +235,30 @@ export default function App() {
         >
           <div>
             <p>{m.match_date}</p>
-            <p className="text-sm text-gray-400">{m.notes}</p>
+            {m.notes && <p className="text-sm text-gray-400">{m.notes}</p>}
           </div>
 
           <div className="flex items-center gap-3">
-            {/* RESULT + POINTS */}
             <div className="flex flex-col items-end">
               <span
-                className={`px-2 py-1 rounded ${
+                className={`px-2 py-1 rounded text-sm font-semibold ${
                   m.winner === "Yash"
                     ? "bg-green-500"
                     : m.winner === "Nishant"
                     ? "bg-gray-500"
-                    : "bg-yellow-500"
+                    : "bg-yellow-500 text-black"
                 }`}
               >
                 {m.winner}
               </span>
-              <span className="text-sm text-gray-300 mt-1">
+              <span className="text-xs text-gray-300 mt-1">
                 Y: {m.yash_points} | N: {m.nishant_points}
               </span>
             </div>
 
-            {/* DELETE BUTTON */}
             <Trash2
               size={18}
-              className="cursor-pointer text-red-400"
+              className="cursor-pointer text-red-400 hover:text-red-600 transition"
               onClick={() => handleDelete(m.id)}
             />
           </div>
