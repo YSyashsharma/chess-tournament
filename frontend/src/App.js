@@ -113,13 +113,6 @@ export default function App() {
     }
   };
 
-  const leader =
-    stats?.yash_total_points > stats?.nishant_total_points
-      ? "Yash"
-      : stats?.yash_total_points < stats?.nishant_total_points
-      ? "Nishant"
-      : "Draw";
-
   return (
     <div className="min-h-screen bg-black text-white p-4">
       {/* HEADER */}
@@ -129,7 +122,7 @@ export default function App() {
         </h1>
       </div>
 
-      {/* LEADER / DAY */}
+      {/* DAY */}
       <motion.div
         animate={{ scale: [0.95, 1] }}
         className="p-6 mb-6 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-black text-center"
@@ -174,7 +167,7 @@ export default function App() {
         </ResponsiveContainer>
       </div>
 
-      {/* PASSWORD INPUT (shown only if adding/deleting) */}
+      {/* PASSWORD INPUT */}
       {showForm && (
         <input
           type="password"
