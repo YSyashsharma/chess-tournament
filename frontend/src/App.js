@@ -122,7 +122,7 @@ export default function App() {
         </h1>
       </div>
 
-      {/* DAY */}
+      {/* LEADER / DAY */}
       <motion.div
         animate={{ scale: [0.95, 1] }}
         className="p-6 mb-6 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-black text-center"
@@ -167,7 +167,7 @@ export default function App() {
         </ResponsiveContainer>
       </div>
 
-      {/* PASSWORD INPUT */}
+      {/* PASSWORD INPUT (shown only if adding/deleting) */}
       {showForm && (
         <input
           type="password"
