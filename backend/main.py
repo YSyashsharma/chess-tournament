@@ -1,6 +1,5 @@
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, date
 import uuid
@@ -22,15 +21,6 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# Handle preflight OPTIONS requests
-@app.options("/{rest_of_path:path}")
-async def preflight_handler(rest_of_path: str):
-    return JSONResponse(content={}, headers={
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-    })
-
 # MongoDB
 client = AsyncIOMotorClient(os.getenv("MONGO_URL"))
 db = client[os.getenv("DB_NAME")]
@@ -45,7 +35,7 @@ async def verify_password(x_password: str = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-# ---------------- AUTH (OPTIONAL KEEP) ----------------
+# ---------------- AUTH ----------------
 @app.post("/api/auth/login")
 async def login(data: dict):
     if data.get("password") == PASSWORD:
@@ -84,6 +74,7 @@ async def create_match(
     }
 
     await collection.insert_one(match)
+    match.pop("_id", None)  # Remove MongoDB ObjectId before returning
 
     return match
 
