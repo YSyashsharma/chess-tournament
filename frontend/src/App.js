@@ -11,22 +11,30 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-// Use environment variable for backend API
+// Use live backend on Render
 const API = process.env.REACT_APP_API;
 
 export default function App() {
   const [stats, setStats] = useState(null);
   const [matches, setMatches] = useState([]);
   const [graphData, setGraphData] = useState([]);
+
   const [showForm, setShowForm] = useState(false);
-  const [password, setPassword] = useState("");
   const [formData, setFormData] = useState({
     match_date: new Date().toISOString().split("T")[0],
     winner: "Yash",
     notes: ""
   });
 
-  // LOAD DATA
+  const [password, setPassword] = useState("");
+
+  // Calculate Day X of 21
+  const startDate = new Date("2026-04-04"); // adjust start date if needed
+  const today = new Date();
+  const dayNumber = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  const dayText = `Day ${dayNumber} of 21`;
+
+  // Load data from backend
   const loadData = async () => {
     try {
       const m = await axios.get(`${API}/matches`);
@@ -34,30 +42,26 @@ export default function App() {
 
       setStats(s.data);
 
-      // Remove duplicates if any
-      const uniqueMatches = Array.from(
-        new Map(m.data.map(item => [item.id, item])).values()
-      );
+      // Remove duplicates and sort by date
+      const uniqueMatches = Array.from(new Map(m.data.map(item => [item.id, item])).values());
+      uniqueMatches.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
       setMatches(uniqueMatches);
 
       // Prepare graph data
       let yash = 0;
       let nishant = 0;
-      const g = uniqueMatches
-        .slice()
-        .sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
-        .map(match => {
-          yash += match.yash_points;
-          nishant += match.nishant_points;
-          return {
-            date: match.match_date,
-            Yash: yash,
-            Nishant: nishant
-          };
-        });
+      const g = uniqueMatches.map(match => {
+        yash += match.yash_points;
+        nishant += match.nishant_points;
+        return {
+          date: match.match_date,
+          Yash: yash,
+          Nishant: nishant
+        };
+      });
       setGraphData(g);
     } catch (err) {
-      console.error("Error loading data:", err);
+      console.error("Error loading data:", err.response?.data || err.message);
     }
   };
 
@@ -65,15 +69,16 @@ export default function App() {
     loadData();
   }, []);
 
-  // ADD MATCH (with password)
+  // Add match
   const handleAddMatch = async () => {
     if (!password) {
       alert("Enter password to add match");
       return;
     }
+
     try {
       await axios.post(`${API}/matches`, formData, {
-        headers: { Authorization: `Bearer ${password}` }
+        headers: { "Authorization": `Bearer ${password}` }
       });
       setShowForm(false);
       setFormData({
@@ -83,25 +88,29 @@ export default function App() {
       });
       setPassword("");
       loadData();
-    } catch {
+    } catch (err) {
+      console.error("Error adding match:", err.response?.data || err.message);
       alert("Error adding match. Check password or backend.");
     }
   };
 
-  // DELETE MATCH (with password)
-  const handleDelete = async id => {
+  // Delete match
+  const handleDelete = async (id) => {
     if (!password) {
       alert("Enter password to delete match");
       return;
     }
+
     if (!window.confirm("Delete this match?")) return;
+
     try {
       await axios.delete(`${API}/matches/${id}`, {
-        headers: { Authorization: `Bearer ${password}` }
+        headers: { "Authorization": `Bearer ${password}` }
       });
       setPassword("");
       loadData();
-    } catch {
+    } catch (err) {
+      console.error("Error deleting match:", err.response?.data || err.message);
       alert("Error deleting match. Check password or backend.");
     }
   };
@@ -122,15 +131,13 @@ export default function App() {
         </h1>
       </div>
 
-      {/* LEADER */}
+      {/* LEADER / DAY */}
       <motion.div
         animate={{ scale: [0.95, 1] }}
         className="p-6 mb-6 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-black text-center"
       >
         <Crown className="mx-auto mb-2" size={40} />
-        <h2 className="text-lg font-bold">
-          {leader === "Draw" ? "Close Match!" : `${leader} Leading`}
-        </h2>
+        <h2 className="text-lg font-bold">{dayText}</h2>
       </motion.div>
 
       {/* SCORE */}
@@ -169,14 +176,16 @@ export default function App() {
         </ResponsiveContainer>
       </div>
 
-      {/* PASSWORD INPUT */}
-      <input
-        type="password"
-        placeholder="Password for add/delete"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        className="w-full mb-4 p-2 bg-white/20 rounded text-black"
-      />
+      {/* ADD PASSWORD INPUT (only when adding/deleting) */}
+      {showForm && (
+        <input
+          type="password"
+          placeholder="Password for add/delete"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full mb-4 p-2 bg-white/20 rounded text-black"
+        />
+      )}
 
       {/* ADD BUTTON */}
       <button
@@ -192,14 +201,15 @@ export default function App() {
           <input
             type="date"
             value={formData.match_date}
-            onChange={e =>
+            onChange={(e) =>
               setFormData({ ...formData, match_date: e.target.value })
             }
             className="w-full mb-2 p-2 bg-white/20 rounded"
           />
+
           <select
             value={formData.winner}
-            onChange={e =>
+            onChange={(e) =>
               setFormData({ ...formData, winner: e.target.value })
             }
             className="w-full mb-2 p-2 bg-white/20 rounded"
@@ -208,14 +218,16 @@ export default function App() {
             <option value="Nishant">Nishant</option>
             <option value="Draw">Draw</option>
           </select>
+
           <textarea
             placeholder="Notes"
             value={formData.notes}
-            onChange={e =>
+            onChange={(e) =>
               setFormData({ ...formData, notes: e.target.value })
             }
             className="w-full mb-2 p-2 bg-white/20 rounded"
           />
+
           <button
             onClick={handleAddMatch}
             className="bg-green-500 px-4 py-2 rounded"
@@ -226,7 +238,7 @@ export default function App() {
       )}
 
       {/* MATCH LIST */}
-      {matches.map(m => (
+      {matches.map((m) => (
         <motion.div
           key={m.id}
           whileHover={{ scale: 1.02 }}
