@@ -11,7 +11,6 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-// Use live backend on Render
 const API = process.env.REACT_APP_API;
 
 export default function App() {
@@ -25,16 +24,20 @@ export default function App() {
     winner: "Yash",
     notes: ""
   });
-
   const [password, setPassword] = useState("");
 
-  // Calculate Day X of 21
-  const startDate = new Date("2026-04-04"); // adjust start date if needed
-  const today = new Date();
-  const dayNumber = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
-  const dayText = `Day ${dayNumber} of 21`;
+  // START DATE
+  const START_DATE = new Date("2026-04-04"); // adjust if needed
+  const TOTAL_DAYS = 21;
 
-  // Load data from backend
+  const getDayText = () => {
+    const now = new Date();
+    const diff = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+    const day = Math.min(diff, TOTAL_DAYS);
+    return `Day ${day} of ${TOTAL_DAYS}`;
+  };
+
+  // LOAD DATA
   const loadData = async () => {
     try {
       const m = await axios.get(`${API}/matches`);
@@ -42,26 +45,26 @@ export default function App() {
 
       setStats(s.data);
 
-      // Remove duplicates and sort by date
       const uniqueMatches = Array.from(new Map(m.data.map(item => [item.id, item])).values());
-      uniqueMatches.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
       setMatches(uniqueMatches);
 
-      // Prepare graph data
       let yash = 0;
       let nishant = 0;
-      const g = uniqueMatches.map(match => {
-        yash += match.yash_points;
-        nishant += match.nishant_points;
-        return {
-          date: match.match_date,
-          Yash: yash,
-          Nishant: nishant
-        };
-      });
+      const g = uniqueMatches
+        .slice()
+        .sort((a,b)=> new Date(a.match_date)-new Date(b.match_date))
+        .map(match => {
+          yash += match.yash_points;
+          nishant += match.nishant_points;
+          return {
+            date: match.match_date,
+            Yash: yash,
+            Nishant: nishant
+          };
+        });
       setGraphData(g);
     } catch (err) {
-      console.error("Error loading data:", err.response?.data || err.message);
+      console.error("Error loading data:", err);
     }
   };
 
@@ -69,13 +72,12 @@ export default function App() {
     loadData();
   }, []);
 
-  // Add match
+  // ADD MATCH
   const handleAddMatch = async () => {
     if (!password) {
       alert("Enter password to add match");
       return;
     }
-
     try {
       await axios.post(`${API}/matches`, formData, {
         headers: { "Authorization": `Bearer ${password}` }
@@ -88,29 +90,25 @@ export default function App() {
       });
       setPassword("");
       loadData();
-    } catch (err) {
-      console.error("Error adding match:", err.response?.data || err.message);
+    } catch {
       alert("Error adding match. Check password or backend.");
     }
   };
 
-  // Delete match
+  // DELETE MATCH
   const handleDelete = async (id) => {
     if (!password) {
       alert("Enter password to delete match");
       return;
     }
-
     if (!window.confirm("Delete this match?")) return;
-
     try {
       await axios.delete(`${API}/matches/${id}`, {
         headers: { "Authorization": `Bearer ${password}` }
       });
       setPassword("");
       loadData();
-    } catch (err) {
-      console.error("Error deleting match:", err.response?.data || err.message);
+    } catch {
       alert("Error deleting match. Check password or backend.");
     }
   };
@@ -137,7 +135,7 @@ export default function App() {
         className="p-6 mb-6 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-black text-center"
       >
         <Crown className="mx-auto mb-2" size={40} />
-        <h2 className="text-lg font-bold">{dayText}</h2>
+        <h2 className="text-lg font-bold">{getDayText()}</h2>
       </motion.div>
 
       {/* SCORE */}
@@ -176,11 +174,11 @@ export default function App() {
         </ResponsiveContainer>
       </div>
 
-      {/* ADD PASSWORD INPUT (only when adding/deleting) */}
+      {/* PASSWORD INPUT (shown only if adding/deleting) */}
       {showForm && (
         <input
           type="password"
-          placeholder="Password for add/delete"
+          placeholder="Enter password to save"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full mb-4 p-2 bg-white/20 rounded text-black"
@@ -206,7 +204,6 @@ export default function App() {
             }
             className="w-full mb-2 p-2 bg-white/20 rounded"
           />
-
           <select
             value={formData.winner}
             onChange={(e) =>
@@ -218,7 +215,6 @@ export default function App() {
             <option value="Nishant">Nishant</option>
             <option value="Draw">Draw</option>
           </select>
-
           <textarea
             placeholder="Notes"
             value={formData.notes}
@@ -227,7 +223,6 @@ export default function App() {
             }
             className="w-full mb-2 p-2 bg-white/20 rounded"
           />
-
           <button
             onClick={handleAddMatch}
             className="bg-green-500 px-4 py-2 rounded"
@@ -263,7 +258,6 @@ export default function App() {
               >
                 {m.winner}
               </span>
-
               <span className="text-sm text-gray-300 mt-1">
                 Y: {m.yash_points} | N: {m.nishant_points}
               </span>

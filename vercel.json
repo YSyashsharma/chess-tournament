@@ -1,13 +1,14 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "framework": "create-react-app",
-      "entrypoint": "frontend/package.json",
-      "routePrefix": "/"
-    },
-    "backend": {
-      "entrypoint": "backend",
-      "routePrefix": "/_/backend"
+  "version": 2,
+  "name": "chess-tournament",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "build" }
     }
-  }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
 }
