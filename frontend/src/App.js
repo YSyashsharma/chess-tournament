@@ -1,17 +1,29 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
-import {
-  Trophy, Crown, Plus, Trash2, Pencil, X, Check, Lock,
-  Swords, TrendingUp, Shield, Zap, Target, Activity, ChevronRight
-} from "lucide-react";
-import {
-  Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, RadialBarChart, RadialBar, Cell, PieChart, Pie
-} from "recharts";
+import { motion, AnimatePresence, useInView } from "framer-motion";
+import { Plus, Trash2, Pencil, X, Check, Lock, ChevronRight } from "lucide-react";
+import { Area, AreaChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const API = (process.env.REACT_APP_API || "") + "/api";
-const PIECES = ["♔", "♕", "♖", "♗", "♘", "♙"];
+const PIECES = ["♔","♕","♖","♗","♘","♙"];
+
+// ── Animated Number ───────────────────────────────────────────────────────────
+function AnimNum({ value, duration = 1200 }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    const end = parseInt(value) || 0;
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 4);
+      setV(Math.round(ease * end));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [value, duration]);
+  return <>{v}</>;
+}
 
 // ── Chess Loader ──────────────────────────────────────────────────────────────
 function ChessLoader() {
@@ -22,40 +34,33 @@ function ChessLoader() {
   }, []);
   return (
     <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.5 }}
+      exit={{ opacity: 0 }} transition={{ duration: 0.4 }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-      style={{ background: "#050505" }}>
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: "repeating-conic-gradient(#fff 0% 25%, transparent 0% 50%)",
-        backgroundSize: "48px 48px"
+      style={{ background: "#F0F4F0" }}>
+      <div className="absolute inset-0" style={{
+        backgroundImage: "radial-gradient(circle, #c8d4c8 1px, transparent 1px)",
+        backgroundSize: "28px 28px", opacity: 0.5
       }} />
-      <div className="absolute w-96 h-96 rounded-full" style={{
-        background: "radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)"
-      }} />
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="flex items-end gap-4 mb-6 h-24">
-          {PIECES.map((piece, i) => (
-            <motion.span key={i} animate={{
-              y: active === i ? -28 : 0,
-              scale: active === i ? 1.5 : 0.9,
-              opacity: active === i ? 1 : 0.15,
-              filter: active === i ? "drop-shadow(0 0 12px #22c55e)" : "none"
-            }} transition={{ type: "spring", damping: 10, stiffness: 220 }}
-              style={{ fontSize: 36, fontFamily: "serif", color: active === i ? "#22c55e" : "#fff", display: "block" }}>
-              {piece}
+      <div className="relative z-10 flex flex-col items-center gap-6">
+        <div className="flex items-end gap-4 h-20">
+          {PIECES.map((p, i) => (
+            <motion.span key={i}
+              animate={{ y: active === i ? -22 : 0, scale: active === i ? 1.4 : 0.85, opacity: active === i ? 1 : 0.18 }}
+              transition={{ type: "spring", damping: 12, stiffness: 240 }}
+              style={{ fontSize: 34, fontFamily: "serif", color: active === i ? "#1a1a1a" : "#888", display: "block" }}>
+              {p}
             </motion.span>
           ))}
         </div>
-        <div className="flex gap-1.5 mb-6">
+        <div className="flex gap-1.5">
           {PIECES.map((_, i) => (
-            <motion.div key={i} animate={{ width: active === i ? 28 : 6, background: active === i ? "#22c55e" : "#1c1c1c" }}
-              transition={{ type: "spring", damping: 18 }} className="h-1 rounded-full" />
+            <motion.div key={i}
+              animate={{ width: active === i ? 24 : 5, background: active === i ? "#1a1a1a" : "#ccc" }}
+              transition={{ type: "spring", damping: 16 }}
+              style={{ height: 2, borderRadius: 99 }} />
           ))}
         </div>
-        <motion.p animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.6, repeat: Infinity }}
-          style={{ color: "#2a2a2a", fontSize: 11, letterSpacing: "0.2em", fontFamily: "'DM Sans',sans-serif" }}>
-          LOADING CHESS ARENA
-        </motion.p>
+        <p style={{ fontSize: 10, letterSpacing: "0.25em", color: "#999", fontFamily: "'DM Mono',monospace" }}>INITIALIZING ARENA</p>
       </div>
     </motion.div>
   );
@@ -68,207 +73,117 @@ function PasswordModal({ title, subtitle, onConfirm, onCancel }) {
   useEffect(() => { ref.current?.focus(); }, []);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      style={{ background: "rgba(0,0,0,0.9)", backdropFilter: "blur(12px)" }} onClick={onCancel}>
-      <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }} transition={{ type: "spring", damping: 22 }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ background: "rgba(240,244,240,0.85)", backdropFilter: "blur(12px)" }}
+      onClick={onCancel}>
+      <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 50, opacity: 0 }} transition={{ type: "spring", damping: 22 }}
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6"
-        style={{ background: "#0a0a0a", border: "1px solid #1a1a1a" }}>
-        <div className="w-8 h-1 rounded-full mx-auto mb-5 sm:hidden" style={{ background: "#222" }} />
-        <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-4"
-          style={{ background: "linear-gradient(135deg,#0f2d1a,#1a4a2a)" }}>
-          <Lock size={18} color="#22c55e" />
-        </div>
-        <p className="text-white font-black text-xl mb-1" style={{ fontFamily: "'Syne',sans-serif" }}>{title}</p>
-        {subtitle && <p className="text-sm mb-5" style={{ color: "#444" }}>{subtitle}</p>}
-        <input ref={ref} type="password" placeholder="Enter password…" value={pw}
-          onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && onConfirm(pw)}
-          className="w-full rounded-2xl px-4 py-3 text-white text-sm mb-4 outline-none"
-          style={{ background: "#111", border: "1px solid #222", caretColor: "#22c55e" }} />
+        className="w-full max-w-sm p-7"
+        style={{ background: "#fff", borderTop: "3px solid #1a1a1a" }}>
+        <div className="w-6 h-0.5 mx-auto mb-6 sm:hidden" style={{ background: "#ddd" }} />
+        <p style={{ fontSize: 10, letterSpacing: "0.2em", color: "#aaa", fontFamily: "'DM Mono',monospace", marginBottom: 4 }}>ACCESS REQUIRED</p>
+        <p className="font-black text-2xl mb-1" style={{ fontFamily: "'Syne',sans-serif", color: "#1a1a1a" }}>{title}</p>
+        {subtitle && <p className="mb-6 text-sm" style={{ color: "#888" }}>{subtitle}</p>}
+        <input ref={ref} type="password" placeholder="ENTER PASSWORD"
+          value={pw} onChange={e => setPw(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && onConfirm(pw)}
+          className="w-full px-4 py-3 text-sm mb-4 outline-none font-mono"
+          style={{ background: "#f5f5f5", border: "1px solid #e0e0e0", letterSpacing: "0.15em", color: "#1a1a1a" }} />
         <div className="flex gap-2">
           <button onClick={() => onConfirm(pw)}
-            className="flex-1 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
-            style={{ background: "linear-gradient(135deg,#16a34a,#22c55e)", color: "#000" }}>Confirm</button>
-          <button onClick={onCancel} className="px-5 py-3 rounded-2xl text-sm font-semibold"
-            style={{ background: "#111", color: "#555", border: "1px solid #1a1a1a" }}>Cancel</button>
+            className="flex-1 py-3 text-sm font-black transition active:scale-95"
+            style={{ background: "#1a1a1a", color: "#fff", letterSpacing: "0.08em" }}>CONFIRM</button>
+          <button onClick={onCancel}
+            className="px-5 py-3 text-sm font-semibold"
+            style={{ background: "transparent", color: "#aaa", border: "1px solid #e0e0e0" }}>CANCEL</button>
         </div>
       </motion.div>
     </motion.div>
   );
 }
 
-// ── Custom Graph Tooltip ──────────────────────────────────────────────────────
-function CustomTooltip({ active, payload, label }) {
+// ── Graph Tooltip ─────────────────────────────────────────────────────────────
+function GraphTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-2xl px-4 py-3" style={{ background: "#0f0f0f", border: "1px solid #1f1f1f", boxShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
-      <p className="text-xs mb-2" style={{ color: "#444" }}>{label}</p>
+    <div style={{ background: "#fff", border: "1px solid #e0e0e0", padding: "10px 14px" }}>
+      <p style={{ fontSize: 9, letterSpacing: "0.15em", color: "#aaa", marginBottom: 6, fontFamily: "'DM Mono',monospace" }}>{label}</p>
       {payload.map(p => (
-        <div key={p.name} className="flex items-center gap-3 mb-1">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-xs" style={{ color: "#666" }}>{p.name}</span>
-          <span className="text-sm font-black ml-auto pl-6" style={{ color: p.color, fontFamily: "'Syne',sans-serif" }}>{p.value}</span>
+        <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+          <div style={{ width: 8, height: 8, background: p.color }} />
+          <span style={{ fontSize: 11, color: "#888" }}>{p.name}</span>
+          <span style={{ fontSize: 13, fontWeight: 900, color: "#1a1a1a", marginLeft: "auto", paddingLeft: 16, fontFamily: "'Syne',sans-serif" }}>{p.value}</span>
         </div>
       ))}
     </div>
   );
 }
 
-// ── Animated Counter ──────────────────────────────────────────────────────────
-function Counter({ value, color }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const end = parseInt(value) || 0;
-    if (start === end) { setDisplay(end); return; }
-    const step = Math.ceil(end / 30);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= end) { setDisplay(end); clearInterval(timer); }
-      else setDisplay(start);
-    }, 30);
-    return () => clearInterval(timer);
-  }, [value]);
-  return <span style={{ color }}>{display}</span>;
-}
-
-// ── Ticker Row ────────────────────────────────────────────────────────────────
-function TickerRow({ stats }) {
-  const items = stats ? [
-    { label: "TOTAL MATCHES", value: stats.total_matches, color: "#fff" },
-    { label: "YASH WINS", value: stats.yash_wins, color: "#22c55e" },
-    { label: "NISHANT WINS", value: stats.nishant_wins, color: "#818cf8" },
-    { label: "DRAWS", value: stats.draws, color: "#facc15" },
-    { label: "YASH POINTS", value: stats.yash_total_points, color: "#22c55e" },
-    { label: "NISHANT POINTS", value: stats.nishant_total_points, color: "#818cf8" },
-  ] : [];
-  const doubled = [...items, ...items];
+// ── Scanline Label ────────────────────────────────────────────────────────────
+function Label({ children, accent }) {
   return (
-    <div className="overflow-hidden mb-5 rounded-2xl" style={{ background: "#0a0a0a", border: "1px solid #111" }}>
-      <motion.div className="flex gap-8 py-3 px-4"
-        animate={{ x: ["0%", "-50%"] }} transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-        style={{ width: "max-content" }}>
-        {doubled.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs font-semibold" style={{ color: "#2a2a2a", letterSpacing: "0.08em" }}>{item.label}</span>
-            <span className="text-xs font-black" style={{ color: item.color, fontFamily: "'Syne',sans-serif" }}>{item.value}</span>
-            <span className="text-xs" style={{ color: "#1a1a1a" }}>◆</span>
-          </div>
-        ))}
-      </motion.div>
-    </div>
+    <p style={{ fontSize: 9, letterSpacing: "0.22em", color: accent || "#aaa", fontFamily: "'DM Mono',monospace", marginBottom: 2 }}>
+      {children}
+    </p>
   );
 }
 
-// ── Win Rate Bar ──────────────────────────────────────────────────────────────
-function WinRateBar({ yashWins, nishantWins, draws, total }) {
-  if (!total) return null;
-  const yp = Math.round((yashWins / total) * 100);
-  const np = Math.round((nishantWins / total) * 100);
-  const dp = 100 - yp - np;
-  return (
-    <div className="mb-5 rounded-3xl p-5" style={{ background: "#0a0a0a", border: "1px solid #111" }}>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold" style={{ color: "#333", letterSpacing: "0.12em" }}>WIN DISTRIBUTION</p>
-        <p className="text-xs" style={{ color: "#2a2a2a" }}>{total} matches</p>
-      </div>
-      <div className="flex h-2 rounded-full overflow-hidden gap-0.5 mb-3">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${yp}%` }} transition={{ duration: 1, delay: 0.3 }}
-          style={{ background: "linear-gradient(90deg,#16a34a,#22c55e)", borderRadius: "9999px 0 0 9999px" }} />
-        <motion.div initial={{ width: 0 }} animate={{ width: `${dp}%` }} transition={{ duration: 1, delay: 0.5 }}
-          style={{ background: "#1a1400" }} />
-        <motion.div initial={{ width: 0 }} animate={{ width: `${np}%` }} transition={{ duration: 1, delay: 0.7 }}
-          style={{ background: "linear-gradient(90deg,#4f46e5,#818cf8)", borderRadius: "0 9999px 9999px 0" }} />
-      </div>
-      <div className="flex justify-between text-xs">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full" style={{ background: "#22c55e" }} />
-          <span style={{ color: "#444" }}>Yash {yp}%</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full" style={{ background: "#facc15" }} />
-          <span style={{ color: "#444" }}>Draw {dp}%</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full" style={{ background: "#818cf8" }} />
-          <span style={{ color: "#444" }}>Nishant {np}%</span>
-        </div>
-      </div>
-    </div>
-  );
+// ── Divider ───────────────────────────────────────────────────────────────────
+function Divider({ vertical, style }) {
+  return <div style={{ background: "#ddd", width: vertical ? 1 : "100%", height: vertical ? "100%" : 1, flexShrink: 0, ...style }} />;
 }
 
-// ── Best Streak ───────────────────────────────────────────────────────────────
-function getStreaks(matches) {
-  if (!matches.length) return { yash: 0, nishant: 0, current: null, currentCount: 0 };
-  const sorted = [...matches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-  let yBest = 0, nBest = 0, cur = null, curCount = 0, tmpY = 0, tmpN = 0;
-  sorted.forEach(m => {
-    if (m.winner === "Yash") { tmpY++; tmpN = 0; yBest = Math.max(yBest, tmpY); }
-    else if (m.winner === "Nishant") { tmpN++; tmpY = 0; nBest = Math.max(nBest, tmpN); }
-    else { tmpY = 0; tmpN = 0; }
-  });
-  const last = sorted[sorted.length - 1];
-  cur = last.winner;
-  let streak = 1;
-  for (let i = sorted.length - 2; i >= 0; i--) {
-    if (sorted[i].winner === cur) streak++;
-    else break;
-  }
-  return { yash: yBest, nishant: nBest, current: cur === "Draw" ? null : cur, currentCount: streak };
-}
-
-// ── Match Card ────────────────────────────────────────────────────────────────
-function MatchCard({ m, i, onEdit, onDelete }) {
-  const isYash = m.winner === "Yash", isDraw = m.winner === "Draw";
-  const clr = isYash ? "#22c55e" : isDraw ? "#facc15" : "#818cf8";
-  const bg = isYash ? "#0a1a0f" : isDraw ? "#141000" : "#0d0d1a";
-  const bdr = isYash ? "#0f2d1a" : isDraw ? "#1f1800" : "#151528";
-  const icon = isYash ? "♔" : isDraw ? "♞" : "♛";
+// ── Match Row ─────────────────────────────────────────────────────────────────
+function MatchRow({ m, i, onEdit, onDelete }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  const isY = m.winner === "Yash", isDraw = m.winner === "Draw";
+  const accent = isY ? "#2d6a3f" : isDraw ? "#b8860b" : "#4a3a8a";
+  const accentLight = isY ? "#e8f5ec" : isDraw ? "#fdf8e3" : "#eeebf8";
   return (
-    <motion.div key={m.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -30, scale: 0.95 }} transition={{ delay: i * 0.04, type: "spring", damping: 20 }}
-      whileHover={{ scale: 1.01, borderColor: clr }}
-      className="rounded-2xl p-4 mb-2 flex items-center gap-3 cursor-default transition-all"
-      style={{ background: bg, border: `1px solid ${bdr}` }}>
-      <motion.div whileHover={{ rotate: [0, -10, 10, 0] }} transition={{ duration: 0.4 }}
-        className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl"
-        style={{ background: "rgba(0,0,0,0.3)", fontFamily: "serif", filter: `drop-shadow(0 0 8px ${clr}44)` }}>
-        {icon}
-      </motion.div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <p className="font-bold text-sm" style={{ color: clr }}>
-            {m.winner === "Draw" ? "Draw" : `${m.winner} won`}
-          </p>
-          <div className="flex-1 h-px" style={{ background: bdr }} />
-          <p className="text-xs" style={{ color: "#2a2a2a" }}>{m.match_date}</p>
+    <motion.div ref={ref}
+      initial={{ opacity: 0, x: -16 }} animate={inView ? { opacity: 1, x: 0 } : {}}
+      transition={{ delay: i * 0.05, duration: 0.4 }}
+      style={{ borderBottom: "1px solid #e8e8e8", display: "flex", alignItems: "stretch" }}>
+      {/* Index */}
+      <div style={{ width: 44, display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #e8e8e8", flexShrink: 0, padding: "14px 0" }}>
+        <span style={{ fontSize: 10, color: "#ccc", fontFamily: "'DM Mono',monospace" }}>{String(i + 1).padStart(2, "0")}</span>
+      </div>
+      {/* Piece */}
+      <div style={{ width: 48, display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #e8e8e8", flexShrink: 0, background: accentLight }}>
+        <span style={{ fontSize: 22, fontFamily: "serif", color: accent }}>{isY ? "♔" : isDraw ? "♞" : "♛"}</span>
+      </div>
+      {/* Info */}
+      <div style={{ flex: 1, padding: "12px 14px", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+          <span style={{ fontSize: 13, fontWeight: 900, color: "#1a1a1a", fontFamily: "'Syne',sans-serif" }}>
+            {m.winner === "Draw" ? "DRAW" : `${m.winner.toUpperCase()} WON`}
+          </span>
+          <span style={{ fontSize: 9, letterSpacing: "0.12em", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>{m.match_date}</span>
         </div>
-        {m.notes && <p className="text-xs truncate mb-1" style={{ color: "#333" }}>{m.notes}</p>}
-        <div className="flex items-center gap-2">
-          <span className="text-xs px-2 py-0.5 rounded-lg font-bold" style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e" }}>Y {m.yash_points}</span>
-          <span className="text-xs" style={{ color: "#222" }}>vs</span>
-          <span className="text-xs px-2 py-0.5 rounded-lg font-bold" style={{ background: "rgba(129,140,248,0.1)", color: "#818cf8" }}>N {m.nishant_points}</span>
+        {m.notes && <p style={{ fontSize: 11, color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.notes}</p>}
+        <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
+          <span style={{ fontSize: 10, padding: "2px 7px", background: "#e8f5ec", color: "#2d6a3f", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>Y:{m.yash_points}</span>
+          <span style={{ fontSize: 10, padding: "2px 7px", background: "#eeebf8", color: "#4a3a8a", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>N:{m.nishant_points}</span>
         </div>
       </div>
-      <div className="flex gap-1.5">
+      {/* Actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 0, borderLeft: "1px solid #e8e8e8", flexShrink: 0 }}>
         <motion.button whileTap={{ scale: 0.85 }} onClick={() => onEdit(m)}
-          className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: "#111", border: "1px solid #1a1a1a" }}>
-          <Pencil size={11} color="#444" />
+          style={{ width: 44, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", borderRight: "1px solid #e8e8e8" }}>
+          <Pencil size={12} color="#bbb" />
         </motion.button>
         <motion.button whileTap={{ scale: 0.85 }} onClick={() => onDelete(m)}
-          className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)" }}>
-          <Trash2 size={11} color="#ef4444" />
+          style={{ width: 44, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent" }}>
+          <Trash2 size={12} color="#e57373" />
         </motion.button>
       </div>
     </motion.div>
   );
 }
 
-// ── Main App ──────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [stats, setStats] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -276,43 +191,41 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [formData, setFormData] = useState({ match_date: today(), winner: "Yash", notes: "" });
+  const [formData, setFormData] = useState({ match_date: td(), winner: "Yash", notes: "" });
   const [modal, setModal] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [tab, setTab] = useState("overview");
 
-  function today() { return new Date().toISOString().split("T")[0]; }
-
+  function td() { return new Date().toISOString().split("T")[0]; }
   const START = new Date("2026-04-04"), TOTAL = 21;
-  const diff = Math.floor((new Date() - START) / 86400000) + 1;
-  const day = Math.max(1, Math.min(diff, TOTAL));
+  const day = Math.max(1, Math.min(Math.floor((new Date() - START) / 86400000) + 1, TOTAL));
   const pct = Math.round((day / TOTAL) * 100);
 
-  const loadData = async (first = false) => {
+  const load = async (first = false) => {
     if (first) setLoading(true);
     try {
       const [m, s] = await Promise.all([axios.get(`${API}/matches`), axios.get(`${API}/stats`)]);
       setStats(s.data);
-      const unique = Array.from(new Map(m.data.map(i => [i.id, i])).values());
-      setMatches(unique);
+      const u = Array.from(new Map(m.data.map(i => [i.id, i])).values());
+      setMatches(u);
       let y = 0, n = 0;
-      setGraphData(unique.slice().sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
+      setGraphData(u.slice().sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
         .map(x => { y += x.yash_points; n += x.nishant_points; return { date: x.match_date, Yash: y, Nishant: n }; }));
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadData(true); }, []);
+  useEffect(() => { load(true); }, []);
 
-  const openAddModal = () => setModal({ action: "auth-add", title: "Add Match", subtitle: "Enter password to record a new match" });
-  const openEditModal = m => setModal({ action: "auth-edit", payload: m, title: "Edit Match", subtitle: "Confirm your password to edit" });
-  const openDeleteModal = m => setModal({ action: "auth-delete", payload: m, title: "Delete Match", subtitle: `Remove match on ${m.match_date}?` });
+  const openAdd = () => setModal({ action: "auth-add", title: "Add Match", subtitle: "Password required to record a match" });
+  const openEdit = m => setModal({ action: "auth-edit", payload: m, title: "Edit Match", subtitle: "Password required to edit" });
+  const openDelete = m => setModal({ action: "auth-delete", payload: m, title: "Delete Match", subtitle: `Remove match on ${m.match_date}?` });
 
-  const handleModalConfirm = async (pw) => {
+  const confirmModal = async (pw) => {
     if (!pw) return;
     const { action, payload } = modal;
     if (action === "auth-add") {
       setModal(null); setEditTarget(null);
-      setFormData({ match_date: today(), winner: "Yash", notes: "" });
+      setFormData({ match_date: td(), winner: "Yash", notes: "" });
       setShowForm({ mode: "add", pw });
     } else if (action === "auth-edit") {
       setModal(null); setEditTarget(payload);
@@ -321,307 +234,397 @@ export default function App() {
     } else if (action === "auth-delete") {
       try {
         await axios.delete(`${API}/matches/${payload.id}`, { headers: { "x-password": pw } });
-        setModal(null); loadData();
+        setModal(null); load();
       } catch { alert("Wrong password."); setModal(null); }
     }
   };
 
-  const handleFormSave = async () => {
+  const saveForm = async () => {
     try {
-      if (showForm.mode === "add")
-        await axios.post(`${API}/matches`, formData, { headers: { "x-password": showForm.pw } });
-      else
-        await axios.put(`${API}/matches/${editTarget.id}`, formData, { headers: { "x-password": showForm.pw } });
-      setShowForm(false); setEditTarget(null); loadData();
+      if (showForm.mode === "add") await axios.post(`${API}/matches`, formData, { headers: { "x-password": showForm.pw } });
+      else await axios.put(`${API}/matches/${editTarget.id}`, formData, { headers: { "x-password": showForm.pw } });
+      setShowForm(false); setEditTarget(null); load();
     } catch { alert("Server error."); }
   };
 
   const leader = stats
     ? stats.yash_total_points > stats.nishant_total_points ? "Yash"
-    : stats.nishant_total_points > stats.yash_total_points ? "Nishant" : "tie"
-    : null;
+    : stats.nishant_total_points > stats.yash_total_points ? "Nishant" : "Tied"
+    : "—";
 
-  const streaks = getStreaks(matches);
+  const getStreaks = () => {
+    if (!matches.length) return { yBest: 0, nBest: 0 };
+    const sorted = [...matches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    let yBest = 0, nBest = 0, ty = 0, tn = 0;
+    sorted.forEach(m => {
+      if (m.winner === "Yash") { ty++; tn = 0; yBest = Math.max(yBest, ty); }
+      else if (m.winner === "Nishant") { tn++; ty = 0; nBest = Math.max(nBest, tn); }
+      else { ty = 0; tn = 0; }
+    });
+    return { yBest, nBest };
+  };
+  const { yBest, nBest } = getStreaks();
 
-  const inp = "w-full rounded-2xl px-4 py-3 text-white text-sm mb-3 outline-none";
-  const inpS = { background: "#0f0f0f", border: "1px solid #1a1a1a", caretColor: "#22c55e" };
-
-  const TABS = ["overview", "history"];
+  const inp = { background: "#f5f5f5", border: "none", borderBottom: "2px solid #1a1a1a", padding: "12px 14px", fontSize: 13, color: "#1a1a1a", width: "100%", outline: "none", fontFamily: "'DM Sans',sans-serif", marginBottom: 14, display: "block" };
 
   return (
-    <div className="min-h-screen" style={{ background: "#050505", fontFamily: "'DM Sans',sans-serif", color: "white" }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800;900&display=swap" rel="stylesheet" />
+    <div style={{ minHeight: "100vh", background: "#F0F4F0", fontFamily: "'DM Sans',sans-serif", color: "#1a1a1a" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap" rel="stylesheet" />
       <style>{`
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 99px; }
-        option { background: #0f0f0f; color: white; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.3); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        option { background: #fff; color: #1a1a1a; }
+        input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.3; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: #f0f4f0; }
+        ::-webkit-scrollbar-thumb { background: #ccc; }
+        @keyframes scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
       `}</style>
 
       <AnimatePresence>{loading && <ChessLoader />}</AnimatePresence>
       <AnimatePresence>
-        {modal && <PasswordModal title={modal.title} subtitle={modal.subtitle}
-          onConfirm={handleModalConfirm} onCancel={() => setModal(null)} />}
+        {modal && <PasswordModal title={modal.title} subtitle={modal.subtitle} onConfirm={confirmModal} onCancel={() => setModal(null)} />}
       </AnimatePresence>
 
-      {/* ── Top Nav ── */}
-      <div className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between"
-        style={{ background: "rgba(5,5,5,0.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid #0f0f0f" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#0f2d1a,#16a34a)" }}>
-            <span style={{ fontSize: 16, fontFamily: "serif" }}>♟</span>
-          </div>
+      {/* ── TOP NAV ── */}
+      <div style={{ borderBottom: "1px solid #d8ddd8", background: "#F0F4F0", position: "sticky", top: 0, zIndex: 20, display: "flex", alignItems: "stretch", height: 48 }}>
+        {/* Logo cell */}
+        <div style={{ padding: "0 20px", display: "flex", alignItems: "center", gap: 10, borderRight: "1px solid #d8ddd8" }}>
+          <span style={{ fontSize: 20, fontFamily: "serif" }}>♟</span>
           <div>
-            <p className="text-xs leading-none mb-0.5" style={{ color: "#333", letterSpacing: "0.1em" }}>TOURNAMENT</p>
-            <p className="font-black text-sm leading-none" style={{ fontFamily: "'Syne',sans-serif" }}>Chess Arena</p>
+            <p style={{ fontSize: 9, letterSpacing: "0.2em", color: "#aaa", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>SYSTEM</p>
+            <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.08em", fontFamily: "'Syne',sans-serif", lineHeight: 1.2 }}>CHESS ARENA</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {TABS.map(t => (
-            <button key={t} onClick={() => setActiveTab(t)}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition"
-              style={{
-                background: activeTab === t ? "#111" : "transparent",
-                color: activeTab === t ? "#22c55e" : "#333",
-                border: activeTab === t ? "1px solid #1a1a1a" : "1px solid transparent"
-              }}>{t}</button>
-          ))}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl ml-1"
-            style={{ background: "#0a0a0a", border: "1px solid #0f0f0f" }}>
-            <Swords size={12} color="#22c55e" />
-            <span className="text-xs font-bold" style={{ color: "#22c55e" }}>D{day}</span>
-          </div>
+        {/* Tabs */}
+        {["OVERVIEW", "HISTORY"].map(t => (
+          <button key={t} onClick={() => setTab(t.toLowerCase())}
+            style={{
+              padding: "0 20px", fontSize: 10, letterSpacing: "0.18em", fontFamily: "'DM Mono',monospace",
+              color: tab === t.toLowerCase() ? "#1a1a1a" : "#aaa",
+              borderRight: "1px solid #d8ddd8", borderBottom: tab === t.toLowerCase() ? "2px solid #1a1a1a" : "2px solid transparent",
+              background: "transparent", cursor: "pointer", transition: "all 0.2s"
+            }}>{t}</button>
+        ))}
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+        {/* Day cell */}
+        <div style={{ padding: "0 20px", display: "flex", alignItems: "center", gap: 10, borderLeft: "1px solid #d8ddd8" }}>
+          <p style={{ fontSize: 9, letterSpacing: "0.2em", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>DAY</p>
+          <p style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Syne',sans-serif", lineHeight: 1 }}>{day}</p>
+          <p style={{ fontSize: 9, color: "#ccc", fontFamily: "'DM Mono',monospace" }}>/{TOTAL}</p>
         </div>
+        {/* Add button */}
+        <button onClick={openAdd}
+          style={{ padding: "0 20px", display: "flex", alignItems: "center", gap: 8, borderLeft: "1px solid #d8ddd8", background: "#1a1a1a", color: "#fff", cursor: "pointer", fontSize: 10, letterSpacing: "0.18em", fontFamily: "'DM Mono',monospace" }}>
+          <Plus size={13} /> ADD MATCH
+        </button>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pt-5 pb-28">
+      <AnimatePresence mode="wait">
 
-        {/* ── Ticker ── */}
-        <TickerRow stats={stats} />
+        {/* ══════════════ OVERVIEW TAB ══════════════ */}
+        {tab === "overview" && (
+          <motion.div key="ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
 
-        <AnimatePresence mode="wait">
-          {activeTab === "overview" && (
-            <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-
-              {/* ── Hero Cards Row ── */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* Yash Card */}
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-                  className="relative overflow-hidden rounded-3xl p-5"
-                  style={{ background: "linear-gradient(145deg,#0a1f12,#061209)", border: "1px solid #0f2d1a" }}>
-                  <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-                    style={{ background: "radial-gradient(circle,rgba(34,197,94,0.1) 0%,transparent 70%)" }} />
-                  <p className="text-xs mb-1 font-semibold" style={{ color: "#1a4a2a", letterSpacing: "0.1em" }}>YASH</p>
-                  <p className="text-4xl font-black mb-1" style={{ fontFamily: "'Syne',sans-serif", color: "#22c55e" }}>
-                    {stats ? <Counter value={stats.yash_total_points} color="#22c55e" /> : "—"}
-                  </p>
-                  <p className="text-xs" style={{ color: "#1a3a22" }}>pts · {stats?.yash_wins ?? 0}W</p>
-                  <div className="mt-3 flex items-center gap-1">
-                    {leader === "Yash" && (
-                      <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
-                        className="text-xs px-2 py-0.5 rounded-full font-bold"
-                        style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>
-                        ♔ LEADING
-                      </motion.span>
-                    )}
+            {/* ── ROW 1: Hero section ── */}
+            <div style={{ display: "flex", borderBottom: "1px solid #d8ddd8", minHeight: 220 }}>
+              {/* Left: Day counter (like 27B) */}
+              <div style={{ flex: "0 0 260px", borderRight: "1px solid #d8ddd8", padding: "28px 28px 24px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <Label>TOURNAMENT DAY</Label>
+                  <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6 }}
+                    style={{ fontSize: 96, fontWeight: 900, lineHeight: 0.9, fontFamily: "'Syne',sans-serif", color: "#1a1a1a", letterSpacing: "-4px" }}>
+                    {day}
+                  </motion.p>
+                </div>
+                <div>
+                  <Divider style={{ marginBottom: 10 }} />
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div><Label>PROGRESS</Label><p style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Syne',sans-serif" }}>{pct}%</p></div>
+                    <div style={{ textAlign: "right" }}><Label>REMAINING</Label><p style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Syne',sans-serif" }}>{TOTAL - day} days</p></div>
                   </div>
-                </motion.div>
-
-                {/* Nishant Card */}
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
-                  className="relative overflow-hidden rounded-3xl p-5"
-                  style={{ background: "linear-gradient(145deg,#0d0d1f,#080812)", border: "1px solid #1a1a3a" }}>
-                  <div className="absolute top-0 left-0 w-24 h-24 rounded-full pointer-events-none"
-                    style={{ background: "radial-gradient(circle,rgba(129,140,248,0.08) 0%,transparent 70%)" }} />
-                  <p className="text-xs mb-1 font-semibold" style={{ color: "#2a2a5a", letterSpacing: "0.1em" }}>NISHANT</p>
-                  <p className="text-4xl font-black mb-1" style={{ fontFamily: "'Syne',sans-serif", color: "#818cf8" }}>
-                    {stats ? <Counter value={stats.nishant_total_points} color="#818cf8" /> : "—"}
-                  </p>
-                  <p className="text-xs" style={{ color: "#2a2a4a" }}>pts · {stats?.nishant_wins ?? 0}W</p>
-                  <div className="mt-3">
-                    {leader === "Nishant" && (
-                      <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
-                        className="text-xs px-2 py-0.5 rounded-full font-bold"
-                        style={{ background: "rgba(129,140,248,0.15)", color: "#818cf8" }}>
-                        ♛ LEADING
-                      </motion.span>
-                    )}
+                  <div style={{ width: "100%", height: 3, background: "#e0e0e0", marginTop: 10, overflow: "hidden" }}>
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                      transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+                      style={{ height: "100%", background: "#1a1a1a" }} />
                   </div>
-                </motion.div>
+                </div>
               </div>
 
-              {/* ── Progress Banner ── */}
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                className="rounded-3xl p-5 mb-4 relative overflow-hidden"
-                style={{ background: "#080808", border: "1px solid #111" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Target size={14} color="#22c55e" />
-                    <p className="text-xs font-semibold" style={{ color: "#333", letterSpacing: "0.1em" }}>TOURNAMENT PROGRESS</p>
+              {/* Center: Score display */}
+              <div style={{ flex: 1, display: "flex" }}>
+                {/* Yash score */}
+                <div style={{ flex: 1, borderRight: "1px solid #d8ddd8", padding: "28px 28px 24px", background: leader === "Yash" ? "#e8f5ec" : "#F0F4F0", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div>
+                    <Label accent={leader === "Yash" ? "#2d6a3f" : undefined}>PLAYER 01</Label>
+                    <p style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Syne',sans-serif", marginBottom: 6, letterSpacing: "0.04em" }}>YASH</p>
+                    <motion.p initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: "spring", damping: 14 }}
+                      style={{ fontSize: 72, fontWeight: 900, fontFamily: "'Syne',sans-serif", lineHeight: 1, color: leader === "Yash" ? "#2d6a3f" : "#1a1a1a" }}>
+                      {stats ? <AnimNum value={stats.yash_total_points} /> : "—"}
+                    </motion.p>
                   </div>
-                  <p className="text-xs font-black" style={{ color: "#22c55e", fontFamily: "'Syne',sans-serif" }}>{pct}%</p>
+                  <div>
+                    <Divider style={{ marginBottom: 10 }} />
+                    <div style={{ display: "flex", gap: 20 }}>
+                      <div><Label>WINS</Label><p style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{stats?.yash_wins ?? "—"}</p></div>
+                      <div><Label>STREAK</Label><p style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{yBest}</p></div>
+                      {leader === "Yash" && <div style={{ marginLeft: "auto", display: "flex", alignItems: "flex-end" }}><span style={{ fontSize: 24, fontFamily: "serif" }}>♔</span></div>}
+                    </div>
+                  </div>
                 </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "#111" }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-                    className="h-full rounded-full" style={{ background: "linear-gradient(90deg,#166534,#22c55e,#4ade80)" }} />
-                </div>
-                <div className="flex justify-between text-xs" style={{ color: "#2a2a2a" }}>
-                  <span>Apr 4, 2026</span>
-                  <span>Day {day} of {TOTAL}</span>
-                  <span>Apr 24, 2026</span>
-                </div>
-              </motion.div>
 
-              {/* ── Streak + Stats Row ── */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {[
-                  { icon: <Zap size={14} color="#facc15" />, label: "Current Streak", value: streaks.current ? `${streaks.currentCount} ${streaks.current === "Draw" ? "draws" : streaks.current}` : "—", color: "#facc15" },
-                  { icon: <Shield size={14} color="#22c55e" />, label: "Best Y Streak", value: `${streaks.yash}W`, color: "#22c55e" },
-                  { icon: <Activity size={14} color="#818cf8" />, label: "Best N Streak", value: `${streaks.nishant}W`, color: "#818cf8" },
-                ].map((s, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.05 }}
-                    className="rounded-2xl p-3" style={{ background: "#080808", border: "1px solid #111" }}>
-                    <div className="flex items-center gap-1.5 mb-2">{s.icon}<p className="text-xs" style={{ color: "#2a2a2a" }}>{s.label}</p></div>
-                    <p className="font-black text-base" style={{ fontFamily: "'Syne',sans-serif", color: s.color }}>{s.value}</p>
-                  </motion.div>
+                {/* VS column */}
+                <div style={{ width: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRight: "1px solid #d8ddd8", gap: 6 }}>
+                  <div style={{ width: 1, flex: 1, background: "#d8ddd8" }} />
+                  <p style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Syne',sans-serif", letterSpacing: "0.05em", color: "#888" }}>VS</p>
+                  <div style={{ width: 1, flex: 1, background: "#d8ddd8" }} />
+                </div>
+
+                {/* Nishant score */}
+                <div style={{ flex: 1, padding: "28px 28px 24px", background: leader === "Nishant" ? "#eeebf8" : "#F0F4F0", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div>
+                    <Label accent={leader === "Nishant" ? "#4a3a8a" : undefined}>PLAYER 02</Label>
+                    <p style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Syne',sans-serif", marginBottom: 6, letterSpacing: "0.04em" }}>NISHANT</p>
+                    <motion.p initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.25, type: "spring", damping: 14 }}
+                      style={{ fontSize: 72, fontWeight: 900, fontFamily: "'Syne',sans-serif", lineHeight: 1, color: leader === "Nishant" ? "#4a3a8a" : "#1a1a1a" }}>
+                      {stats ? <AnimNum value={stats.nishant_total_points} /> : "—"}
+                    </motion.p>
+                  </div>
+                  <div>
+                    <Divider style={{ marginBottom: 10 }} />
+                    <div style={{ display: "flex", gap: 20 }}>
+                      <div><Label>WINS</Label><p style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{stats?.nishant_wins ?? "—"}</p></div>
+                      <div><Label>STREAK</Label><p style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{nBest}</p></div>
+                      {leader === "Nishant" && <div style={{ marginLeft: "auto", display: "flex", alignItems: "flex-end" }}><span style={{ fontSize: 24, fontFamily: "serif" }}>♛</span></div>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Leader panel */}
+              <div style={{ flex: "0 0 180px", borderLeft: "1px solid #d8ddd8", padding: "28px 20px 24px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <Label>CURRENT LEADER</Label>
+                  <motion.p initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.5 }}
+                    style={{ fontSize: 38, fontWeight: 900, fontFamily: "'Syne',sans-serif", lineHeight: 1.1, letterSpacing: "-1px" }}>
+                    {leader}
+                  </motion.p>
+                </div>
+                <div>
+                  <Divider style={{ marginBottom: 10 }} />
+                  <Label>TOTAL MATCHES</Label>
+                  <p style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{stats?.total_matches ?? "—"}</p>
+                  <Label style={{ marginTop: 8 }}>DRAWS</Label>
+                  <p style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Syne',sans-serif" }}>{stats?.draws ?? "—"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── ROW 2: Win bar + meta ── */}
+            <div style={{ display: "flex", borderBottom: "1px solid #d8ddd8", height: 56 }}>
+              <div style={{ display: "flex", alignItems: "center", padding: "0 20px", borderRight: "1px solid #d8ddd8", gap: 10, flexShrink: 0 }}>
+                <Label>WIN SPLIT</Label>
+              </div>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", padding: "0 20px", gap: 4 }}>
+                {stats && stats.total_matches > 0 && (() => {
+                  const yp = Math.round((stats.yash_wins / stats.total_matches) * 100);
+                  const np = Math.round((stats.nishant_wins / stats.total_matches) * 100);
+                  const dp = 100 - yp - np;
+                  return (
+                    <div style={{ flex: 1, display: "flex", height: 6, gap: 2, overflow: "hidden" }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${yp}%` }} transition={{ duration: 1, delay: 0.4 }}
+                        style={{ background: "#2d6a3f", height: "100%", borderRadius: 0 }} />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${dp}%` }} transition={{ duration: 1, delay: 0.6 }}
+                        style={{ background: "#c8b400", height: "100%", borderRadius: 0 }} />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${np}%` }} transition={{ duration: 1, delay: 0.8 }}
+                        style={{ background: "#4a3a8a", height: "100%", borderRadius: 0 }} />
+                    </div>
+                  );
+                })()}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", padding: "0 16px", borderLeft: "1px solid #d8ddd8", gap: 16 }}>
+                {[["Y", "#2d6a3f", `${stats ? Math.round((stats.yash_wins / (stats.total_matches || 1)) * 100) : 0}%`],
+                  ["D", "#c8b400", `${stats ? Math.round((stats.draws / (stats.total_matches || 1)) * 100) : 0}%`],
+                  ["N", "#4a3a8a", `${stats ? Math.round((stats.nishant_wins / (stats.total_matches || 1)) * 100) : 0}%`]
+                ].map(([l, c, v]) => (
+                  <div key={l} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 8, height: 8, background: c }} />
+                    <span style={{ fontSize: 9, letterSpacing: "0.15em", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>{l} {v}</span>
+                  </div>
                 ))}
               </div>
+            </div>
 
-              {/* ── Win Distribution ── */}
-              {stats && <WinRateBar yashWins={stats.yash_wins} nishantWins={stats.nishant_wins} draws={stats.draws} total={stats.total_matches} />}
-
-              {/* ── Graph ── */}
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                className="rounded-3xl p-5 mb-4" style={{ background: "#080808", border: "1px solid #111" }}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp size={14} color="#22c55e" />
-                    <p className="text-xs font-semibold" style={{ color: "#333", letterSpacing: "0.1em" }}>CUMULATIVE POINTS</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{ background: "#22c55e" }} /><span className="text-xs" style={{ color: "#333" }}>Yash</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{ background: "#818cf8" }} /><span className="text-xs" style={{ color: "#333" }}>Nishant</span></div>
+            {/* ── ROW 3: Graph ── */}
+            <div style={{ display: "flex", borderBottom: "1px solid #d8ddd8" }}>
+              <div style={{ flex: 1, padding: "20px 0 0" }}>
+                <div style={{ padding: "0 20px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Label>CUMULATIVE POINTS — MATCH TIMELINE</Label>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    {[["YASH", "#2d6a3f"], ["NISHANT", "#4a3a8a"]].map(([n, c]) => (
+                      <div key={n} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ width: 16, height: 2, background: c }} />
+                        <span style={{ fontSize: 9, letterSpacing: "0.15em", fontFamily: "'DM Mono',monospace", color: "#aaa" }}>{n}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart data={graphData}>
+                  <AreaChart data={graphData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gy" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#22c55e" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#2d6a3f" stopOpacity={0.12} />
+                        <stop offset="100%" stopColor="#2d6a3f" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gn" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#818cf8" stopOpacity={0.15} />
-                        <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#4a3a8a" stopOpacity={0.1} />
+                        <stop offset="100%" stopColor="#4a3a8a" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="2 8" stroke="#0f0f0f" />
-                    <XAxis dataKey="date" tick={{ fill: "#222", fontSize: 9 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "#222", fontSize: 9 }} axisLine={false} tickLine={false} width={28} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="Yash" stroke="#22c55e" strokeWidth={2} fill="url(#gy)" dot={false} activeDot={{ r: 4, fill: "#22c55e" }} />
-                    <Area type="monotone" dataKey="Nishant" stroke="#818cf8" strokeWidth={2} fill="url(#gn)" dot={false} activeDot={{ r: 4, fill: "#818cf8" }} />
+                    <CartesianGrid strokeDasharray="1 8" stroke="#e8e8e8" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill: "#bbb", fontSize: 9, fontFamily: "'DM Mono',monospace" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#bbb", fontSize: 9, fontFamily: "'DM Mono',monospace" }} axisLine={false} tickLine={false} width={30} />
+                    <Tooltip content={<GraphTooltip />} />
+                    <Area type="monotone" dataKey="Yash" stroke="#2d6a3f" strokeWidth={2} fill="url(#gy)" dot={false} activeDot={{ r: 3, fill: "#2d6a3f", strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="Nishant" stroke="#4a3a8a" strokeWidth={2} fill="url(#gn)" dot={false} activeDot={{ r: 3, fill: "#4a3a8a", strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
-              </motion.div>
-
-              {/* ── Recent Matches (last 3) ── */}
-              <div className="mb-2">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-semibold" style={{ color: "#333", letterSpacing: "0.1em" }}>RECENT MATCHES</p>
-                  <button onClick={() => setActiveTab("history")} className="flex items-center gap-1 text-xs"
-                    style={{ color: "#22c55e" }}>View all <ChevronRight size={12} /></button>
-                </div>
-                {matches.slice(0, 3).map((m, i) => (
-                  <MatchCard key={m.id} m={m} i={i} onEdit={openEditModal} onDelete={openDeleteModal} />
-                ))}
               </div>
-            </motion.div>
-          )}
-
-          {activeTab === "history" && (
-            <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold" style={{ color: "#333", letterSpacing: "0.1em" }}>ALL MATCHES</p>
-                <span className="text-xs px-2 py-1 rounded-xl" style={{ background: "#0a0a0a", color: "#333", border: "1px solid #111" }}>{matches.length} total</span>
+              {/* Right panel: graph meta */}
+              <div style={{ width: 160, borderLeft: "1px solid #d8ddd8", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
+                <div><Label>Y MAX PTS</Label><p style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{graphData.length ? graphData[graphData.length - 1]?.Yash : "—"}</p></div>
+                <Divider />
+                <div><Label>N MAX PTS</Label><p style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{graphData.length ? graphData[graphData.length - 1]?.Nishant : "—"}</p></div>
+                <Divider />
+                <div><Label>MATCHES</Label><p style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Syne',sans-serif" }}>{matches.length}</p></div>
               </div>
-              {matches.length === 0 && (
-                <div className="text-center py-20">
-                  <span className="text-6xl block mb-4" style={{ filter: "grayscale(1) opacity(0.1)", fontFamily: "serif" }}>♟</span>
-                  <p className="text-sm" style={{ color: "#222" }}>No matches recorded yet</p>
-                </div>
-              )}
-              <AnimatePresence>
-                {matches.map((m, i) => (
-                  <MatchCard key={m.id} m={m} i={i} onEdit={openEditModal} onDelete={openDeleteModal} />
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
 
-        {/* ── Add / Edit Form ── */}
-        <AnimatePresence>
-          {showForm && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 flex items-end justify-center sm:items-center"
-              style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
-              onClick={() => { setShowForm(false); setEditTarget(null); }}>
-              <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 60, opacity: 0 }} transition={{ type: "spring", damping: 22 }}
-                onClick={e => e.stopPropagation()}
-                className="w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6"
-                style={{ background: "#080808", border: "1px solid #111" }}>
-                <div className="w-8 h-1 rounded-full mx-auto mb-4 sm:hidden" style={{ background: "#1a1a1a" }} />
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p className="text-xs mb-0.5" style={{ color: "#333", letterSpacing: "0.1em" }}>{showForm.mode === "edit" ? "EDITING" : "NEW MATCH"}</p>
-                    <p className="font-black" style={{ fontFamily: "'Syne',sans-serif" }}>{showForm.mode === "edit" ? editTarget?.match_date : "Record Result"}</p>
-                  </div>
-                  <button onClick={() => { setShowForm(false); setEditTarget(null); }}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#111" }}>
-                    <X size={14} color="#444" />
-                  </button>
+            {/* ── ROW 4: Recent matches header ── */}
+            <div style={{ display: "flex", borderBottom: "1px solid #d8ddd8", height: 40, alignItems: "center" }}>
+              <div style={{ padding: "0 20px", borderRight: "1px solid #d8ddd8" }}>
+                <Label>RECENT MATCHES</Label>
+              </div>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => setTab("history")}
+                style={{ padding: "0 20px", display: "flex", alignItems: "center", gap: 6, background: "transparent", cursor: "pointer", borderLeft: "1px solid #d8ddd8", height: "100%", fontSize: 9, letterSpacing: "0.18em", fontFamily: "'DM Mono',monospace", color: "#888" }}>
+                VIEW ALL <ChevronRight size={11} />
+              </button>
+            </div>
+
+            {/* ── Match column headers ── */}
+            <div style={{ display: "flex", borderBottom: "1px solid #e8e8e8", height: 32, alignItems: "center" }}>
+              <div style={{ width: 44, borderRight: "1px solid #e8e8e8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 8, color: "#ccc", fontFamily: "'DM Mono',monospace" }}>#</span>
+              </div>
+              <div style={{ width: 48, borderRight: "1px solid #e8e8e8" }} />
+              <div style={{ flex: 1, padding: "0 14px" }}><span style={{ fontSize: 8, letterSpacing: "0.18em", color: "#bbb", fontFamily: "'DM Mono',monospace" }}>RESULT · DATE · NOTES</span></div>
+              <div style={{ width: 88, borderLeft: "1px solid #e8e8e8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 8, color: "#ccc", fontFamily: "'DM Mono',monospace" }}>ACTIONS</span>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {matches.slice(0, 5).map((m, i) => (
+                <MatchRow key={m.id} m={m} i={i} onEdit={openEdit} onDelete={openDelete} />
+              ))}
+            </AnimatePresence>
+
+            {matches.length === 0 && !loading && (
+              <div style={{ padding: "48px 20px", textAlign: "center" }}>
+                <span style={{ fontSize: 48, fontFamily: "serif", opacity: 0.1, display: "block", marginBottom: 12 }}>♟</span>
+                <p style={{ fontSize: 10, letterSpacing: "0.2em", color: "#bbb", fontFamily: "'DM Mono',monospace" }}>NO MATCHES RECORDED</p>
+              </div>
+            )}
+
+          </motion.div>
+        )}
+
+        {/* ══════════════ HISTORY TAB ══════════════ */}
+        {tab === "history" && (
+          <motion.div key="hist" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+            {/* Header row */}
+            <div style={{ display: "flex", borderBottom: "1px solid #d8ddd8", height: 56, alignItems: "center" }}>
+              <div style={{ padding: "0 20px", borderRight: "1px solid #d8ddd8" }}>
+                <Label>ALL MATCHES</Label>
+                <p style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Syne',sans-serif", lineHeight: 1 }}>{matches.length} RECORDED</p>
+              </div>
+              <div style={{ flex: 1 }} />
+              <div style={{ padding: "0 20px", borderLeft: "1px solid #d8ddd8" }}>
+                <Label>APR 4 – APR 24, 2026</Label>
+              </div>
+            </div>
+            {/* Column headers */}
+            <div style={{ display: "flex", borderBottom: "1px solid #e8e8e8", height: 32, alignItems: "center" }}>
+              <div style={{ width: 44, borderRight: "1px solid #e8e8e8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 8, color: "#ccc", fontFamily: "'DM Mono',monospace" }}>#</span>
+              </div>
+              <div style={{ width: 48, borderRight: "1px solid #e8e8e8" }} />
+              <div style={{ flex: 1, padding: "0 14px" }}><span style={{ fontSize: 8, letterSpacing: "0.18em", color: "#bbb", fontFamily: "'DM Mono',monospace" }}>RESULT · DATE · NOTES</span></div>
+              <div style={{ width: 88, borderLeft: "1px solid #e8e8e8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 8, color: "#ccc", fontFamily: "'DM Mono',monospace" }}>ACTIONS</span>
+              </div>
+            </div>
+            <AnimatePresence>
+              {matches.map((m, i) => <MatchRow key={m.id} m={m} i={i} onEdit={openEdit} onDelete={openDelete} />)}
+            </AnimatePresence>
+            {matches.length === 0 && (
+              <div style={{ padding: "80px 20px", textAlign: "center" }}>
+                <span style={{ fontSize: 64, fontFamily: "serif", opacity: 0.07, display: "block", marginBottom: 16 }}>♟</span>
+                <p style={{ fontSize: 10, letterSpacing: "0.2em", color: "#bbb", fontFamily: "'DM Mono',monospace" }}>NO MATCHES RECORDED YET</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Form Drawer ── */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: "fixed", inset: 0, zIndex: 40, background: "rgba(240,244,240,0.9)", backdropFilter: "blur(8px)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+            onClick={() => { setShowForm(false); setEditTarget(null); }}>
+            <motion.div initial={{ y: 60 }} animate={{ y: 0 }} exit={{ y: 60 }}
+              transition={{ type: "spring", damping: 22 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 480, background: "#fff", borderTop: "3px solid #1a1a1a" }}>
+              {/* Form header */}
+              <div style={{ display: "flex", alignItems: "stretch", borderBottom: "1px solid #e8e8e8" }}>
+                <div style={{ flex: 1, padding: "16px 20px" }}>
+                  <Label>{showForm.mode === "edit" ? "EDITING MATCH" : "NEW MATCH"}</Label>
+                  <p style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Syne',sans-serif", lineHeight: 1 }}>
+                    {showForm.mode === "edit" ? editTarget?.match_date : "RECORD RESULT"}
+                  </p>
                 </div>
+                <button onClick={() => { setShowForm(false); setEditTarget(null); }}
+                  style={{ width: 56, display: "flex", alignItems: "center", justifyContent: "center", borderLeft: "1px solid #e8e8e8", background: "transparent", cursor: "pointer" }}>
+                  <X size={16} color="#bbb" />
+                </button>
+              </div>
+              <div style={{ padding: 20 }}>
+                <Label>MATCH DATE</Label>
                 <input type="date" value={formData.match_date}
                   onChange={e => setFormData({ ...formData, match_date: e.target.value })}
-                  className={inp} style={inpS} />
+                  style={{ ...inp }} />
+                <Label>WINNER</Label>
                 <select value={formData.winner}
                   onChange={e => setFormData({ ...formData, winner: e.target.value })}
-                  className={inp} style={{ ...inpS, color: "white" }}>
-                  <option value="Yash">♔ Yash wins</option>
-                  <option value="Nishant">♛ Nishant wins</option>
-                  <option value="Draw">♞ Draw</option>
+                  style={{ ...inp }}>
+                  <option value="Yash">♔ YASH WINS</option>
+                  <option value="Nishant">♛ NISHANT WINS</option>
+                  <option value="Draw">♞ DRAW</option>
                 </select>
-                <textarea placeholder="Notes (optional)" value={formData.notes} rows={2}
+                <Label>NOTES (OPTIONAL)</Label>
+                <textarea placeholder="Match notes…" value={formData.notes} rows={2}
                   onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                  className={inp} style={{ ...inpS, resize: "none" }} />
-                <motion.button whileTap={{ scale: 0.97 }} onClick={handleFormSave}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-                  style={{ background: "linear-gradient(135deg,#16a34a,#22c55e)", color: "#000" }}>
-                  <Check size={15} /> {showForm.mode === "edit" ? "Save Changes" : "Add Match"}
+                  style={{ ...inp, resize: "none" }} />
+                <motion.button whileTap={{ scale: 0.98 }} onClick={saveForm}
+                  style={{ width: "100%", padding: "14px 0", background: "#1a1a1a", color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", fontFamily: "'DM Mono',monospace", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, border: "none" }}>
+                  <Check size={14} /> {showForm.mode === "edit" ? "SAVE CHANGES" : "RECORD MATCH"}
                 </motion.button>
-              </motion.div>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* ── FAB ── */}
-      <AnimatePresence>
-        {!showForm && !modal && (
-          <motion.button
-            initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }}
-            exit={{ scale: 0, rotate: 180 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-            transition={{ type: "spring", damping: 15 }}
-            onClick={openAddModal}
-            className="fixed bottom-6 right-5 w-14 h-14 rounded-2xl flex items-center justify-center z-40"
-            style={{ background: "linear-gradient(135deg,#16a34a,#22c55e)", boxShadow: "0 0 0 1px #22c55e33, 0 0 30px rgba(34,197,94,0.35)" }}>
-            <Plus size={22} color="#000" strokeWidth={2.5} />
-          </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
