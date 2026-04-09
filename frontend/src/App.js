@@ -31,7 +31,7 @@ const MESSAGES = [
   "Server selected",
   "Connecting to backend server",
   "Loading match data",
-  "Building scoreboard",
+  "Connecting to server",
 ];
 
 const FAKE_DURATION = 5600; // ms — perfectly covers all 8 messages at 700ms each
