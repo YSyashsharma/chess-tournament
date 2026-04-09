@@ -34,32 +34,43 @@ const MESSAGES = [
   "Building scoreboard",
 ];
 
+const FAKE_DURATION = 5600; // ms — perfectly covers all 8 messages at 700ms each
+
 function Loader({ done }) {
   const [pct, setPct] = useState(0);
   const [msgIdx, setMsgIdx] = useState(0);
+  const startRef = useRef(Date.now());
+  const doneRef = useRef(false);
   const pctRef = useRef(0);
 
-  useEffect(() => {
-    // Smooth progress — slows down near end unless done=true
-    const id = setInterval(() => {
-      if (done) {
-        pctRef.current = Math.min(pctRef.current + 8, 100);
-      } else {
-        // slow crawl that never hits 100
-        const remaining = 92 - pctRef.current;
-        const increment = Math.max(0.3, remaining * 0.04);
-        pctRef.current = Math.min(pctRef.current + increment, 92);
-      }
-      setPct(Math.floor(pctRef.current));
-    }, 80);
-    return () => clearInterval(id);
-  }, [done]);
+  useEffect(() => { doneRef.current = done; }, [done]);
 
   useEffect(() => {
-    // Cycle messages based on pct
-    const idx = Math.min(Math.floor((pct / 100) * MESSAGES.length), MESSAGES.length - 1);
-    setMsgIdx(idx);
-  }, [pct]);
+    const id = setInterval(() => {
+      if (doneRef.current) {
+        // Data ready — race linearly to 100 fast
+        pctRef.current = Math.min(pctRef.current + 4, 100);
+      } else {
+        // Perfectly linear: 0→88 over FAKE_DURATION ms, no slowdown
+        const elapsed = Date.now() - startRef.current;
+        const linear = Math.min((elapsed / FAKE_DURATION) * 88, 88);
+        pctRef.current = Math.max(pctRef.current, linear);
+      }
+      setPct(Math.floor(pctRef.current));
+    }, 16);
+
+    // Each message shown for 700ms, independently of the bar
+    const msgId = setInterval(() => {
+      if (doneRef.current) return;
+      setMsgIdx(p => Math.min(p + 1, MESSAGES.length - 1));
+    }, 700);
+
+    return () => { clearInterval(id); clearInterval(msgId); };
+  }, []);
+
+  useEffect(() => {
+    if (done) setMsgIdx(MESSAGES.length - 1);
+  }, [done]);
 
   const PIECES = ["♔","♕","♖","♗","♘","♙"];
   const [active, setActive] = useState(0);
@@ -74,13 +85,11 @@ function Loader({ done }) {
       style={{ position: "fixed", inset: 0, zIndex: 100, background: "#0B0C10",
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         padding: "0 40px" }}>
-      {/* Chess pieces */}
       <div style={{ display: "flex", gap: 16, marginBottom: 48 }}>
         {PIECES.map((p, i) => (
           <motion.span key={i}
             animate={{ y: active === i ? -16 : 0, scale: active === i ? 1.4 : 0.8,
-              opacity: active === i ? 1 : 0.1,
-              color: active === i ? "#C8F135" : "#fff" }}
+              opacity: active === i ? 1 : 0.1, color: active === i ? "#C8F135" : "#fff" }}
             transition={{ type: "spring", damping: 10, stiffness: 220 }}
             style={{ fontSize: 26, fontFamily: "serif", display: "block",
               filter: active === i ? "drop-shadow(0 0 12px #C8F135)" : "none" }}>
@@ -88,34 +97,30 @@ function Loader({ done }) {
           </motion.span>
         ))}
       </div>
-
-      {/* Message */}
       <div style={{ height: 24, marginBottom: 20, overflow: "hidden", width: "100%", textAlign: "center" }}>
         <AnimatePresence mode="wait">
           <motion.p key={msgIdx}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
-            style={{ fontSize: 12, color: "#555", fontFamily: "monospace",
-              letterSpacing: "0.08em" }}>
+            style={{ fontSize: 12, color: "#555", fontFamily: "monospace", letterSpacing: "0.08em" }}>
             {MESSAGES[msgIdx]}...
           </motion.p>
         </AnimatePresence>
       </div>
-
-      {/* Bar */}
       <div style={{ width: "100%", maxWidth: 260 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
           <span style={{ fontSize: 9, letterSpacing: "0.2em", color: "#2a2a2a", fontFamily: "monospace" }}>CHESS ARENA</span>
           <span style={{ fontSize: 9, color: "#C8F135", fontFamily: "monospace", fontWeight: 700 }}>{pct}%</span>
         </div>
         <div style={{ width: "100%", height: 2, background: "#1a1a1a", overflow: "hidden", borderRadius: 99 }}>
-          <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.15 }}
+          <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.1 }}
             style={{ height: "100%", background: "linear-gradient(90deg,#22c55e,#C8F135)", borderRadius: 99 }} />
         </div>
       </div>
     </motion.div>
   );
 }
+
 
 // ── Password modal ────────────────────────────────────────────────────────────
 function PwModal({ title, subtitle, onConfirm, onCancel }) {
