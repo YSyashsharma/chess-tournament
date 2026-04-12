@@ -23,54 +23,54 @@ function AnimNum({ value, duration = 1000 }) {
 }
 
 // ── Loader ────────────────────────────────────────────────────────────────────
-const MESSAGES = [
-  "Running algorithms",
-  "Verifying your IP address",
-  "Verifying your MAC address",
-  "Choosing best server for you",
-  "Server selected",
-  "Connecting to backend server",
-  "Loading match data",
-  "Connecting to server",
+const CHECKPOINTS = [
+  [2,   900,  "Running algorithms..."],
+  [9,   800,  "Verifying your IP address..."],
+  [21,  700,  "Verifying your MAC address..."],
+  [34,  600,  "Choosing best server for you..."],
+  [47,  500,  "Server selected..."],
+  [61,  500,  "Connecting to backend server..."],
+  [75,  400,  "Loading match data..."],
+  [92,  400,  "Connecting to server..."],
+  [99,  300,  "Almost there..."],
 ];
-
-const FAKE_DURATION = 5600; // ms — perfectly covers all 8 messages at 700ms each
 
 function Loader({ done }) {
   const [pct, setPct] = useState(0);
-  const [msgIdx, setMsgIdx] = useState(0);
-  const startRef = useRef(Date.now());
-  const doneRef = useRef(false);
+  const [msg, setMsg] = useState(CHECKPOINTS[0][2]);
   const pctRef = useRef(0);
+  const doneRef = useRef(false);
+  const phaseRef = useRef(0);
+  const pausingRef = useRef(false);
 
   useEffect(() => { doneRef.current = done; }, [done]);
 
   useEffect(() => {
-    const id = setInterval(() => {
+    const tick = setInterval(() => {
       if (doneRef.current) {
-        // Data ready — race linearly to 100 fast
-        pctRef.current = Math.min(pctRef.current + 4, 100);
-      } else {
-        // Perfectly linear: 0→88 over FAKE_DURATION ms, no slowdown
-        const elapsed = Date.now() - startRef.current;
-        const linear = Math.min((elapsed / FAKE_DURATION) * 88, 88);
-        pctRef.current = Math.max(pctRef.current, linear);
+        pctRef.current = Math.min(pctRef.current + 5, 100);
+        setMsg("Connected!");
+        setPct(Math.floor(pctRef.current));
+        return;
       }
-      setPct(Math.floor(pctRef.current));
-    }, 16);
-
-    // Each message shown for 700ms, independently of the bar
-    const msgId = setInterval(() => {
-      if (doneRef.current) return;
-      setMsgIdx(p => Math.min(p + 1, MESSAGES.length - 1));
-    }, 700);
-
-    return () => { clearInterval(id); clearInterval(msgId); };
+      if (pausingRef.current) return;
+      const phase = phaseRef.current;
+      if (phase >= CHECKPOINTS.length) return;
+      const [target, pauseMs, message] = CHECKPOINTS[phase];
+      if (pctRef.current < target) {
+        pctRef.current = Math.min(pctRef.current + 0.5, target);
+        setPct(Math.floor(pctRef.current));
+        setMsg(message);
+      } else {
+        pausingRef.current = true;
+        setTimeout(() => {
+          phaseRef.current = phase + 1;
+          pausingRef.current = false;
+        }, pauseMs);
+      }
+    }, 30);
+    return () => clearInterval(tick);
   }, []);
-
-  useEffect(() => {
-    if (done) setMsgIdx(MESSAGES.length - 1);
-  }, [done]);
 
   const PIECES = ["♔","♕","♖","♗","♘","♙"];
   const [active, setActive] = useState(0);
@@ -99,11 +99,11 @@ function Loader({ done }) {
       </div>
       <div style={{ height: 24, marginBottom: 20, overflow: "hidden", width: "100%", textAlign: "center" }}>
         <AnimatePresence mode="wait">
-          <motion.p key={msgIdx}
+          <motion.p key={msg}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
             style={{ fontSize: 12, color: "#555", fontFamily: "monospace", letterSpacing: "0.08em" }}>
-            {MESSAGES[msgIdx]}...
+            {msg}
           </motion.p>
         </AnimatePresence>
       </div>
@@ -113,7 +113,7 @@ function Loader({ done }) {
           <span style={{ fontSize: 9, color: "#C8F135", fontFamily: "monospace", fontWeight: 700 }}>{pct}%</span>
         </div>
         <div style={{ width: "100%", height: 2, background: "#1a1a1a", overflow: "hidden", borderRadius: 99 }}>
-          <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.1 }}
+          <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.08 }}
             style={{ height: "100%", background: "linear-gradient(90deg,#22c55e,#C8F135)", borderRadius: 99 }} />
         </div>
       </div>
@@ -190,63 +190,123 @@ function GTooltip({ active, payload, label }) {
 }
 
 // ── Match card ────────────────────────────────────────────────────────────────
-function MatchCard({ m, i, onEdit, onDelete, yashLeading }) {
+function MatchCard({ m, i, onEdit, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
   const isY = m.winner === "Yash", isDraw = m.winner === "Draw";
   const accent = isY ? "#22c55e" : isDraw ? "#f59e0b" : "#818cf8";
   const bgAccent = isY ? "rgba(34,197,94,0.06)" : isDraw ? "rgba(245,158,11,0.06)" : "rgba(129,140,248,0.06)";
-  // King goes to winner of that match
   const piece = isDraw ? "♞" : "♔";
   const pieceColor = isY ? "#22c55e" : isDraw ? "#f59e0b" : "#818cf8";
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }} transition={{ delay: i * 0.04, type: "spring", damping: 20 }}
-      style={{ background: "#111318", border: "1px solid #1e2028", borderRadius: 18,
-        padding: "16px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
-      <div style={{ width: 48, height: 48, borderRadius: 13, background: bgAccent,
-        border: `1px solid ${accent}22`, display: "flex", alignItems: "center",
-        justifyContent: "center", fontSize: 24, fontFamily: "serif",
-        color: pieceColor, flexShrink: 0 }}>
-        {piece}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: accent,
-            fontFamily: "'Syne',sans-serif" }}>
-            {m.winner === "Draw" ? "DRAW" : `${m.winner.toUpperCase()} WON`}
-          </span>
-          <span style={{ fontSize: 10, color: "#333", fontFamily: "monospace" }}>{m.match_date}</span>
+      onClick={() => setExpanded(e => !e)}
+      style={{ background: "#111318", border: `1px solid ${expanded ? accent + "55" : "#1e2028"}`,
+        borderRadius: 18, padding: "16px 16px", marginBottom: 10, cursor: "pointer",
+        transition: "border-color 0.2s" }}>
+      {/* Collapsed row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 13, background: bgAccent,
+          border: `1px solid ${accent}22`, display: "flex", alignItems: "center",
+          justifyContent: "center", fontSize: 24, fontFamily: "serif",
+          color: pieceColor, flexShrink: 0 }}>
+          {piece}
         </div>
-        {m.notes && <p style={{ fontSize: 12, color: "#444", overflow: "hidden",
-          textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 5 }}>{m.notes}</p>}
-        <div style={{ display: "flex", gap: 6 }}>
-          <span style={{ fontSize: 11, padding: "3px 9px", borderRadius: 7,
-            background: "rgba(34,197,94,0.08)", color: "#22c55e", fontWeight: 700, fontFamily: "monospace" }}>
-            Y:{m.yash_points}
-          </span>
-          <span style={{ fontSize: 11, padding: "3px 9px", borderRadius: 7,
-            background: "rgba(129,140,248,0.08)", color: "#818cf8", fontWeight: 700, fontFamily: "monospace" }}>
-            N:{m.nishant_points}
-          </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: accent, fontFamily: "'Syne',sans-serif" }}>
+              {m.winner === "Draw" ? "DRAW" : `${m.winner.toUpperCase()} WON`}
+            </span>
+            <span style={{ fontSize: 10, color: "#333", fontFamily: "monospace" }}>{m.match_date}</span>
+          </div>
+          {/* Always show notes preview, truncated when collapsed */}
+          {m.notes && (
+            <p style={{ fontSize: 12, color: "#444", overflow: "hidden",
+              textOverflow: expanded ? "unset" : "ellipsis",
+              whiteSpace: expanded ? "normal" : "nowrap", marginBottom: 5,
+              wordBreak: "break-word" }}>{m.notes}</p>
+          )}
+          <div style={{ display: "flex", gap: 6 }}>
+            <span style={{ fontSize: 11, padding: "3px 9px", borderRadius: 7,
+              background: "rgba(34,197,94,0.08)", color: "#22c55e", fontWeight: 700, fontFamily: "monospace" }}>
+              Y:{m.yash_points}
+            </span>
+            <span style={{ fontSize: 11, padding: "3px 9px", borderRadius: 7,
+              background: "rgba(129,140,248,0.08)", color: "#818cf8", fontWeight: 700, fontFamily: "monospace" }}>
+              N:{m.nishant_points}
+            </span>
+          </div>
         </div>
+        <div style={{ flexShrink: 0, fontSize: 10, color: "#2a2a2a", fontFamily: "monospace",
+          transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</div>
       </div>
-      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-        <motion.button whileTap={{ scale: 0.8 }} onClick={() => onEdit(m)}
-          style={{ width: 36, height: 36, borderRadius: 10, background: "#1a1b1f",
-            border: "1px solid #222", display: "flex", alignItems: "center",
-            justifyContent: "center", cursor: "pointer" }}>
-          <Pencil size={13} color="#444" />
-        </motion.button>
-        <motion.button whileTap={{ scale: 0.8 }} onClick={() => onDelete(m)}
-          style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(239,68,68,0.05)",
-            border: "1px solid rgba(239,68,68,0.12)", display: "flex", alignItems: "center",
-            justifyContent: "center", cursor: "pointer" }}>
-          <Trash2 size={13} color="#ef4444" />
-        </motion.button>
-      </div>
+
+      {/* Expanded section */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }}
+            style={{ overflow: "hidden" }}>
+            <div style={{ borderTop: `1px solid ${C_BORDER}`, marginTop: 14, paddingTop: 14 }}>
+              {/* Full note */}
+              {m.notes ? (
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ fontSize: 9, letterSpacing: "0.18em", color: "#333",
+                    fontFamily: "monospace", marginBottom: 6 }}>MATCH NOTES</p>
+                  <p style={{ fontSize: 14, color: "#aaa", lineHeight: 1.6, wordBreak: "break-word" }}>{m.notes}</p>
+                </div>
+              ) : (
+                <p style={{ fontSize: 12, color: "#2a2a2a", marginBottom: 14, fontFamily: "monospace" }}>No notes for this match</p>
+              )}
+              {/* Extra info */}
+              <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
+                <div>
+                  <p style={{ fontSize: 9, letterSpacing: "0.18em", color: "#333", fontFamily: "monospace", marginBottom: 4 }}>DATE</p>
+                  <p style={{ fontSize: 14, fontWeight: 700 }}>{m.match_date}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 9, letterSpacing: "0.18em", color: "#333", fontFamily: "monospace", marginBottom: 4 }}>RESULT</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: accent }}>{m.winner === "Draw" ? "Draw" : `${m.winner} won`}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 9, letterSpacing: "0.18em", color: "#333", fontFamily: "monospace", marginBottom: 4 }}>POINTS</p>
+                  <p style={{ fontSize: 14, fontWeight: 700 }}>
+                    <span style={{ color: "#22c55e" }}>Y:{m.yash_points}</span>
+                    <span style={{ color: "#2a2a2a", margin: "0 4px" }}>·</span>
+                    <span style={{ color: "#818cf8" }}>N:{m.nishant_points}</span>
+                  </p>
+                </div>
+              </div>
+              {/* Action buttons */}
+              <div style={{ display: "flex", gap: 8 }}>
+                <motion.button whileTap={{ scale: 0.92 }}
+                  onClick={e => { e.stopPropagation(); onEdit(m); }}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 12, background: "#1a1b1f",
+                    border: "1px solid #222", display: "flex", alignItems: "center",
+                    justifyContent: "center", gap: 6, cursor: "pointer",
+                    fontSize: 12, color: "#666", fontFamily: "'DM Sans',sans-serif" }}>
+                  <Pencil size={13} color="#555" /> Edit match
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.92 }}
+                  onClick={e => { e.stopPropagation(); onDelete(m); }}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 12,
+                    background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    gap: 6, cursor: "pointer", fontSize: 12, color: "#ef4444",
+                    fontFamily: "'DM Sans',sans-serif" }}>
+                  <Trash2 size={13} color="#ef4444" /> Delete
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
+
+const C_BORDER = "#1e2028";
 
 // ── Streak calc ───────────────────────────────────────────────────────────────
 function calcStreaks(matches) {
