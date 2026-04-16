@@ -23,52 +23,41 @@ function AnimNum({ value, duration = 1000 }) {
 }
 
 // ── Loader ────────────────────────────────────────────────────────────────────
-const CHECKPOINTS = [
-  [2,   900,  "Running algorithms..."],
-  [9,   800,  "Verifying your IP address..."],
-  [21,  700,  "Verifying your MAC address..."],
-  [34,  600,  "Choosing best server for you..."],
-  [47,  500,  "Server selected..."],
-  [61,  500,  "Connecting to backend server..."],
-  [75,  400,  "Loading match data..."],
-  [92,  400,  "Connecting to server..."],
-  [99,  300,  "Almost there..."],
+// Message shown at each % range
+const MSG_RANGES = [
+  [0,  15,  "Running algorithms..."],
+  [15, 28,  "Verifying your IP address..."],
+  [28, 42,  "Verifying your MAC address..."],
+  [42, 55,  "Choosing best server for you..."],
+  [55, 67,  "Server selected..."],
+  [67, 78,  "Connecting to backend server..."],
+  [78, 89,  "Loading match data..."],
+  [89, 96,  "Connecting to server..."],
+  [96, 100, "Almost there..."],
 ];
+
+function getMsg(p) {
+  for (const [lo, hi, m] of MSG_RANGES) {
+    if (p >= lo && p < hi) return m;
+  }
+  return "Connected!";
+}
 
 function Loader({ done }) {
   const [pct, setPct] = useState(0);
-  const [msg, setMsg] = useState(CHECKPOINTS[0][2]);
   const pctRef = useRef(0);
   const doneRef = useRef(false);
-  const phaseRef = useRef(0);
-  const pausingRef = useRef(false);
 
   useEffect(() => { doneRef.current = done; }, [done]);
 
   useEffect(() => {
+    // Each % takes ~120ms normally → full run ~12s
+    // When done, speed up to 30ms per % → finishes in ~1s from wherever it is
     const tick = setInterval(() => {
-      if (doneRef.current) {
-        pctRef.current = Math.min(pctRef.current + 5, 100);
-        setMsg("Connected!");
-        setPct(Math.floor(pctRef.current));
-        return;
-      }
-      if (pausingRef.current) return;
-      const phase = phaseRef.current;
-      if (phase >= CHECKPOINTS.length) return;
-      const [target, pauseMs, message] = CHECKPOINTS[phase];
-      if (pctRef.current < target) {
-        pctRef.current = Math.min(pctRef.current + 0.5, target);
-        setPct(Math.floor(pctRef.current));
-        setMsg(message);
-      } else {
-        pausingRef.current = true;
-        setTimeout(() => {
-          phaseRef.current = phase + 1;
-          pausingRef.current = false;
-        }, pauseMs);
-      }
-    }, 30);
+      const speed = doneRef.current ? 3 : 0.35;
+      pctRef.current = Math.min(pctRef.current + speed, 100);
+      setPct(Math.floor(pctRef.current));
+    }, 40);
     return () => clearInterval(tick);
   }, []);
 
@@ -99,11 +88,11 @@ function Loader({ done }) {
       </div>
       <div style={{ height: 24, marginBottom: 20, overflow: "hidden", width: "100%", textAlign: "center" }}>
         <AnimatePresence mode="wait">
-          <motion.p key={msg}
+          <motion.p key={getMsg(pct)}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
             style={{ fontSize: 12, color: "#555", fontFamily: "monospace", letterSpacing: "0.08em" }}>
-            {msg}
+            {getMsg(pct)}
           </motion.p>
         </AnimatePresence>
       </div>
