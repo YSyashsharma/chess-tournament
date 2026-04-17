@@ -5,6 +5,7 @@ import { Plus, Trash2, Pencil, X, Check, Lock } from "lucide-react";
 import { Area, AreaChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const API = (process.env.REACT_APP_API || "") + "/api";
+window._arenaStart = window._arenaStart || Date.now();
 
 // ── Animated counter ──────────────────────────────────────────────────────────
 function AnimNum({ value, duration = 1000 }) {
@@ -43,20 +44,22 @@ function getMsg(p) {
   return "Connected!";
 }
 
-function Loader({ done }) {
+function Loader() {
   const [pct, setPct] = useState(0);
   const pctRef = useRef(0);
-  const doneRef = useRef(false);
-
-  useEffect(() => { doneRef.current = done; }, [done]);
+  const DURATION = 9000; // 9 seconds: smooth 1→100, never stops, never stucks
+  const startRef = useRef(Date.now());
 
   useEffect(() => {
-    // Each % takes ~120ms normally → full run ~12s
-    // When done, speed up to 30ms per % → finishes in ~1s from wherever it is
     const tick = setInterval(() => {
-      const speed = doneRef.current ? 3 : 0.35;
-      pctRef.current = Math.min(pctRef.current + speed, 100);
-      setPct(Math.floor(pctRef.current));
+      const elapsed = Date.now() - startRef.current;
+      // Ease-in-out curve over DURATION ms → always reaches 100 at exactly 9s
+      const t = Math.min(elapsed / DURATION, 1);
+      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      const next = Math.floor(eased * 100);
+      pctRef.current = next;
+      setPct(next);
+      if (t >= 1) clearInterval(tick);
     }, 40);
     return () => clearInterval(tick);
   }, []);
@@ -347,7 +350,10 @@ export default function App() {
     finally {
       setLoadDone(true);
       // give bar time to finish to 100
-      setTimeout(() => setShowApp(true), 600);
+      // Wait minimum 9s (matching loader duration) before showing app
+      const elapsed = Date.now() - window._arenaStart;
+      const remaining = Math.max(9000 - elapsed, 0);
+      setTimeout(() => setShowApp(true), remaining + 300);
     }
   };
 
@@ -433,7 +439,7 @@ export default function App() {
 
       {/* Loader */}
       <AnimatePresence>
-        {!showApp && <Loader done={loadDone} />}
+        {!showApp && <Loader />}
       </AnimatePresence>
 
       {/* Modals */}
