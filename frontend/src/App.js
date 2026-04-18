@@ -24,43 +24,39 @@ function AnimNum({ value, duration = 1000 }) {
 }
 
 // ── Loader ────────────────────────────────────────────────────────────────────
-// Message shown at each % range
 const MSG_RANGES = [
-  [0,  15,  "Running algorithms..."],
-  [15, 28,  "Verifying your IP address..."],
-  [28, 42,  "Verifying your MAC address..."],
-  [42, 55,  "Choosing best server for you..."],
-  [55, 67,  "Server selected..."],
-  [67, 78,  "Connecting to backend server..."],
-  [78, 89,  "Loading match data..."],
-  [89, 96,  "Connecting to server..."],
-  [96, 100, "Almost there..."],
+  [0,  12,  "Running algorithms..."],
+  [12, 24,  "Verifying your IP address..."],
+  [24, 36,  "Verifying your MAC address..."],
+  [36, 48,  "Choosing best server for you..."],
+  [48, 60,  "Server selected..."],
+  [60, 72,  "Connecting to backend server..."],
+  [72, 84,  "Loading match data..."],
+  [84, 95,  "Almost there..."],
+  [95, 101, "Connected to server"],
 ];
 
 function getMsg(p) {
   for (const [lo, hi, m] of MSG_RANGES) {
     if (p >= lo && p < hi) return m;
   }
-  return "Connected!";
+  return "Connected to server";
 }
+
+const TOTAL_MS = 20000; // exactly 20 seconds
 
 function Loader() {
   const [pct, setPct] = useState(0);
-  const pctRef = useRef(0);
-  const DURATION = 9000; // 9 seconds: smooth 1→100, never stops, never stucks
   const startRef = useRef(Date.now());
 
   useEffect(() => {
     const tick = setInterval(() => {
       const elapsed = Date.now() - startRef.current;
-      // Ease-in-out curve over DURATION ms → always reaches 100 at exactly 9s
-      const t = Math.min(elapsed / DURATION, 1);
-      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-      const next = Math.floor(eased * 100);
-      pctRef.current = next;
+      const t = Math.min(elapsed / TOTAL_MS, 1);
+      // Linear — every % takes same time, no slowdown at end
+      const next = Math.floor(t * 100);
       setPct(next);
-      if (t >= 1) clearInterval(tick);
-    }, 40);
+    }, 200); // update every 200ms = 1% per 200ms = 100% in 20s exactly
     return () => clearInterval(tick);
   }, []);
 
@@ -352,7 +348,7 @@ export default function App() {
       // give bar time to finish to 100
       // Wait minimum 9s (matching loader duration) before showing app
       const elapsed = Date.now() - window._arenaStart;
-      const remaining = Math.max(9000 - elapsed, 0);
+      const remaining = Math.max(20000 - elapsed, 0);
       setTimeout(() => setShowApp(true), remaining + 300);
     }
   };
